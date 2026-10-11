@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chinmay Parmar</title>
+<meta name="description" content="Chinmay Parmar, data and ad measurement analyst in Toronto. Live Amazon Ads measurement lab in SQL and Python, two years at CIBC.">
+<meta property="og:title" content="Chinmay Parmar · Data & Ad Measurement Analyst">
+<meta property="og:description" content="Did the ads work? Try the 10-second demo, then explore the full Amazon Ads measurement lab.">
+<meta property="og:image" content="https://chinmayyhere-debug.github.io/og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: dark top bar whose search box is the assistant; short navy hero with a compact profile card; one stats strip; then white panels in a single 1120px column: About, Demo, Project, Experience, Skills, Credentials, Contact; one-line footer. */
+:root {
+  color-scheme: light;
+  --top: #131921;
+  --navy: #232f3e;
+  --orange: #ff9900;
+  --orange-d: #c45500;
+  --yellow: #ffd814;
+  --teal: #007185;
+  --bg: #eaeded;
+  --card: #ffffff;
+  --ink: #0f1111;
+  --ink-2: #565959;
+  --line: #e3e6e6;
+  --good: #067d62;
+  --f: "Noto Sans", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; overflow-x: clip; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+a { color: var(--teal); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; }
+@media (max-width: 600px) { .wrap { padding-inline: 14px; } }
+p { margin: 0 0 12px; max-width: 68ch; }
+.muted { color: var(--ink-2); }
+
+/* ---------- top bar ---------- */
+.top { background: var(--top); position: sticky; top: 0; z-index: 50; padding-top: env(safe-area-inset-top, 0px); }
+.top .in { max-width: 1120px; margin: 0 auto; display: flex; align-items: center; gap: 20px; padding: 10px 20px; }
+.logo { color: #fff; font-weight: 800; font-size: 19px; letter-spacing: -.02em; white-space: nowrap; }
+.logo span { color: var(--orange); }
+.logo:hover { text-decoration: none; }
+.top nav { display: flex; gap: 18px; }
+.top nav a { color: #e3e6e6; font-size: 14px; white-space: nowrap; }
+.top nav a:hover { color: #fff; text-decoration: none; }
+@media (max-width: 900px) { .top nav { display: none; } }
+@media (max-width: 600px) { .top .in { flex-wrap: wrap; gap: 8px; padding: 8px 14px 10px; } .search { order: 3; flex-basis: 100%; } }
+
+/* search = assistant */
+.search { position: relative; flex: 1; min-width: 0; }
+.search form { display: flex; height: 40px; border-radius: 8px; overflow: hidden; background: #fff; }
+.search form:focus-within { box-shadow: 0 0 0 3px var(--orange); }
+.search input { flex: 1; min-width: 0; border: 0; padding: 0 14px; font: inherit; font-size: 14.5px; color: var(--ink); outline: 0; }
+.search input::placeholder { color: #6f7373; }
+.search button.go { width: 46px; border: 0; background: #febd69; display: grid; place-items: center; cursor: pointer; }
+.search button.go:hover { background: #f3a847; }
+.drop { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: #fff; border-radius: 8px; box-shadow: 0 16px 40px -10px rgba(0,0,0,.4); max-height: min(70vh, 560px); overflow-y: auto; }
+.drop[hidden] { display: none; }
+.drop .sect { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding: 12px 16px 4px; }
+.drop .sug { display: flex; gap: 10px; align-items: center; width: 100%; border: 0; background: none; text-align: left; font: inherit; font-size: 14.5px; color: var(--ink); padding: 9px 16px; cursor: pointer; }
+.drop .sug svg { flex: none; opacity: .5; }
+.drop .sug:hover, .drop .sug.act { background: #f3f3f3; }
+.drop .ans { padding: 14px 16px 16px; border-bottom: 1px solid var(--line); }
+.drop .ans .q { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.drop .ans .a { font-size: 14.5px; line-height: 1.6; }
+.drop .ans .a ul { margin: 6px 0 0; padding-left: 18px; }
+.drop .ans .a code { font-family: var(--mono); font-size: .9em; }
+.drop .foot { font-size: 12px; color: var(--ink-2); padding: 10px 16px 12px; border-top: 1px solid var(--line); }
+
+/* ---------- hero ---------- */
+.hero { background: var(--navy); color: #fff; padding-block: 52px 88px; }
+.hero .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 48px; align-items: center; }
+@media (max-width: 900px) { .hero .grid { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #d5dbe1; }
+.status i { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+.hero h1 { font-size: clamp(2.5rem, 6vw, 4rem); line-height: 1.05; letter-spacing: -.03em; font-weight: 800; margin: 12px 0 6px; }
+.hero .role { font-size: clamp(1.05rem, 2vw, 1.25rem); font-weight: 600; color: var(--orange); margin-bottom: 16px; }
+.hero p { color: #d5dbe1; font-size: 16px; max-width: 54ch; }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; font: inherit; font-size: 14px; font-weight: 600; border-radius: 99px; padding: 10px 20px; cursor: pointer; border: 1px solid transparent; white-space: nowrap; color: var(--ink); }
+.btn:hover { text-decoration: none; }
+.btn.orange { background: var(--orange); }
+.btn.orange:hover { background: #f08804; }
+.btn.yellow { background: var(--yellow); }
+.btn.yellow:hover { background: #f7ca00; }
+.btn.ghost { color: #fff; border-color: rgba(255,255,255,.45); }
+.btn.ghost:hover { background: rgba(255,255,255,.08); }
+.btn.light { background: #fff; border-color: #d5d9d9; }
+.btn.light:hover { background: #f7fafa; }
+
+.card-id { background: #fff; color: var(--ink); border-radius: 12px; padding: 22px; }
+.card-id .who { display: flex; gap: 14px; align-items: center; }
+.avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--navy); color: var(--orange); display: grid; place-items: center; font-weight: 800; font-size: 20px; flex: none; }
+.card-id .who b { display: block; font-size: 17px; }
+.card-id .who span { font-size: 13.5px; color: var(--ink-2); }
+.card-id dl { margin: 18px 0; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 9px 12px; font-size: 14px; }
+.card-id dt { color: var(--ink-2); }
+.card-id dd { margin: 0; overflow-wrap: anywhere; }
+.card-id .links { display: flex; gap: 8px; }
+.card-id .links .btn { flex: 1; padding: 9px 12px; }
+
+/* stats strip */
+.stats { background: var(--card); border-radius: 12px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: -48px; position: relative; box-shadow: 0 6px 20px -12px rgba(0,0,0,.25); }
+.stats div { padding: 20px 22px; border-left: 1px solid var(--line); }
+.stats div:first-child { border-left: 0; }
+.stats b { display: block; font-size: 1.85rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.stats b.o { color: var(--orange-d); }
+.stats span { font-size: 13px; color: var(--ink-2); }
+@media (max-width: 820px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stats div:nth-child(3) { border-left: 0; } .stats div:nth-child(n+3) { border-top: 1px solid var(--line); } }
+
+/* ---------- panels ---------- */
+section { margin-top: 20px; scroll-margin-top: 80px; }
+.panel { background: var(--card); border-radius: 12px; padding: clamp(22px, 3.2vw, 36px); }
+.panel > h2 { font-size: clamp(1.35rem, 2.4vw, 1.65rem); font-weight: 700; letter-spacing: -.015em; margin: 0 0 18px; }
+.kicker { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--orange-d); margin-bottom: 6px; }
+
+/* about */
+.about { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+@media (max-width: 820px) { .about { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+.about p { font-size: 15.5px; }
+
+/* demo */
+.demo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 36px; align-items: center; }
+@media (max-width: 860px) { .demo { grid-template-columns: minmax(0, 1fr); gap: 22px; } }
+.demo h3 { font-size: clamp(1.35rem, 2.6vw, 1.8rem); line-height: 1.2; letter-spacing: -.02em; font-weight: 800; margin: 0 0 8px; }
+.toggle { display: inline-flex; background: #f0f2f2; border-radius: 99px; padding: 4px; margin: 10px 0 18px; }
+.toggle button { font: inherit; font-size: 14px; font-weight: 600; padding: 8px 18px; background: transparent; border: 0; border-radius: 99px; cursor: pointer; color: var(--ink-2); }
+.toggle button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+.claim { display: flex; align-items: baseline; gap: 10px; }
+.claim b { font-size: clamp(3rem, 7vw, 4.2rem); font-weight: 800; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
+.claim span { color: var(--ink-2); }
+.verdict { margin-top: 14px; font-size: 15px; }
+.bars { display: grid; gap: 18px; }
+.bar .lab { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+.bar .lab b { font-family: var(--mono); font-weight: 500; }
+.bar .track { height: 28px; background: #f0f2f2; border-radius: 6px; overflow: hidden; }
+.bar .fill { height: 100%; border-radius: 6px; transition: width .6s cubic-bezier(.2,.8,.2,1), background .3s; }
+.bars .cap { font-size: 12.5px; color: var(--ink-2); margin: 0; }
+
+/* project */
+.project { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 36px; align-items: center; }
+@media (max-width: 860px) { .project { grid-template-columns: minmax(0, 1fr); gap: 22px; } }
+.preview { background: var(--top); border-radius: 12px; padding: 20px; color: #fff; display: grid; gap: 10px; }
+.preview .k { font-family: var(--mono); font-size: 11.5px; color: #9aa7b6; }
+.preview .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.preview .kv div { background: var(--navy); border-radius: 8px; padding: 12px; }
+.preview .kv b { display: block; font-size: 1.4rem; font-weight: 800; letter-spacing: -.02em; }
+.preview .kv b.o { color: var(--orange); }
+.preview .kv span { font-size: 12px; color: #c3ccd6; }
+.project h3 { font-size: clamp(1.35rem, 2.6vw, 1.8rem); line-height: 1.2; letter-spacing: -.02em; font-weight: 800; margin: 0 0 8px; }
+.project ul { margin: 14px 0 20px; padding-left: 18px; display: grid; gap: 7px; }
+.project .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* experience */
+.jobs { display: grid; }
+.job { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 24px; padding: 20px 0; border-top: 1px solid var(--line); }
+.job:first-child { border-top: 0; padding-top: 0; }
+.job .when { font-size: 13.5px; color: var(--ink-2); }
+.job h3 { font-size: 16.5px; margin: 0; }
+.job .co { color: var(--ink-2); font-size: 14px; margin-bottom: 8px; }
+.job ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 14.5px; }
+.now { display: inline-block; font-size: 11.5px; font-weight: 700; color: var(--good); background: #e7f6f1; border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+@media (max-width: 680px) { .job { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+/* skills + credentials */
+.cols3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.cols2 { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 32px; }
+@media (max-width: 820px) { .cols3, .cols2 { grid-template-columns: minmax(0, 1fr); gap: 22px; } }
+.cols3 h4, .cols2 h4 { font-size: 14.5px; margin: 0 0 10px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags span { font-size: 13px; background: #f0f2f2; border-radius: 6px; padding: 4px 10px; }
+.list { display: grid; }
+.list a, .list div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14.5px; color: var(--ink); }
+.list > :first-child { border-top: 0; padding-top: 0; }
+.list a:hover { color: var(--teal); text-decoration: none; }
+.list span:last-child { color: var(--ink-2); font-size: 13px; white-space: nowrap; }
+.list span:first-child { min-width: 0; overflow-wrap: anywhere; }
+
+/* contact */
+.contact { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px; }
+.contact h2 { font-size: clamp(1.35rem, 2.4vw, 1.65rem); margin: 0 0 4px; }
+.contact .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.mail { font-family: var(--mono); font-size: 14.5px; user-select: all; overflow-wrap: anywhere; }
+#copied { font-size: 13px; color: var(--good); min-width: 60px; }
+
+footer { background: var(--top); color: #c3ccd6; font-size: 12.5px; margin-top: 36px; }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); }
+footer a { color: #e3e6e6; margin-left: 14px; }
+@media (prefers-reduced-motion: reduce) { .bar .fill { transition: none; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="in">
+  <a class="logo" href="#top">chinmay<span>.</span>parmar</a>
+  <div class="search" id="search">
+    <form id="ask" role="search" autocomplete="off">
+      <input id="q" type="search" placeholder="Ask about Chinmay: SQL, the Ads lab, experience…" aria-label="Ask about Chinmay" aria-controls="drop" aria-expanded="false">
+      <button class="go" type="submit" aria-label="Ask"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#131921" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></button>
+    </form>
+    <div class="drop" id="drop" hidden role="listbox" aria-label="Answers and suggested questions"></div>
+  </div>
+  <nav aria-label="Sections"><a href="#about">About</a><a href="#demo">Demo</a><a href="#project">Project</a><a href="#experience">Experience</a><a href="#contact">Contact</a></nav>
+</div></header>
+
+<div class="hero" id="top"><div class="wrap grid">
+  <div>
+    <span class="status"><i></i>Open to work · Analytics Consultant, Amazon Ads</span>
+    <h1>Chinmay Parmar</h1>
+    <div class="role">Data &amp; Ad Measurement Analyst</div>
+    <p>I find out which ads actually drive sales. Two years at CIBC analyzing transaction data, and a live Amazon Ads measurement lab built in SQL and Python.</p>
+    <div class="actions">
+      <a class="btn orange" href="#demo">Try the live demo</a>
+      <a class="btn ghost" href="#project">View the project</a>
+    </div>
+  </div>
+  <aside class="card-id" aria-label="Profile">
+    <div class="who"><div class="avatar" aria-hidden="true">CP</div><div><b>Chinmay Parmar</b><span>Toronto, ON</span></div></div>
+    <dl>
+      <dt>Current</dt><dd>CIBC, Insolvency</dd>
+      <dt>Previous</dt><dd>CIBC, Fraud / Dispute Analyst</dd>
+      <dt>Education</dt><dd>B.Eng Computer Eng. · Grad. Cert. AI &amp; Data Science</dd>
+      <dt>Email</dt><dd>chinmayy.parmar@gmail.com</dd>
+    </dl>
+    <div class="links"><a class="btn light" href="https://www.linkedin.com/in/chinmayyhere/">LinkedIn</a><a class="btn light" href="https://github.com/chinmayyhere-debug">GitHub</a></div>
+  </aside>
+</div></div>
+
+<main class="wrap">
+  <div class="stats" aria-label="Highlights">
+    <div><b class="o">+30%</b><span>real lift, measured with a holdout test</span></div>
+    <div><b>7x</b><span>overstatement caught in the easy metric</span></div>
+    <div><b>+4.6%</b><span>sales from the same budget, reallocated</span></div>
+    <div><b>10,000+</b><span>transaction cases analyzed at CIBC</span></div>
+  </div>
+
+  <section id="about"><div class="panel">
+    <h2>About me</h2>
+    <div class="about">
+      <p>I started on the front line of banking. At CIBC I investigated more than 10,000 card fraud and dispute cases, which taught me to read transaction data closely and to tell a real pattern from a coincidence. Today I work in CIBC's Insolvency team, reviewing financial information with Legal, Compliance and branch teams.</p>
+      <p>I hold a B.Eng in Computer Engineering and a Graduate Certificate in AI &amp; Data Science. I'm moving into ad measurement because it asks the question I answered every day at the bank: <b>what actually caused this?</b> The lab below shows how I'd answer it for an advertiser.</p>
+    </div>
+  </div></section>
+
+  <section id="demo"><div class="panel">
+    <div class="demo">
+      <div>
+        <div class="kicker">Live demo · 10 seconds</div>
+        <h3>A coffee brand on Amazon.ca ran holiday ads. Did they work?</h3>
+        <p class="muted">Same campaign, same 40,000 shoppers. Pick how to measure it.</p>
+        <div class="toggle" role="group" aria-label="Measurement method">
+          <button id="t-naive" aria-pressed="true">Easy way</button>
+          <button id="t-hold" aria-pressed="false">Holdout test</button>
+        </div>
+        <div class="claim"><b id="claim">+223%</b><span>lift in buyers</span></div>
+        <p class="verdict" id="verdict"></p>
+      </div>
+      <div class="bars" aria-live="polite">
+        <div class="bar"><div class="lab"><span id="l1"></span><b id="v1"></b></div><div class="track"><div class="fill" id="f1"></div></div></div>
+        <div class="bar"><div class="lab"><span id="l2"></span><b id="v2"></b></div><div class="track"><div class="fill" id="f2"></div></div></div>
+        <p class="cap" id="cap"></p>
+      </div>
+    </div>
+  </div></section>
+
+  <section id="project"><div class="panel">
+    <div class="project">
+      <div class="preview" role="img" aria-label="Lab results preview">
+        <div class="k">amazon-ads-lab</div>
+        <div class="kv">
+          <div><b class="o">+30%</b><span>holdout lift</span></div>
+          <div><b>2.46x</b><span>incremental ROAS</span></div>
+          <div><b>0.975</b><span>MMM R²</span></div>
+          <div><b class="o">+4.6%</b><span>same-budget sales</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="kicker">Featured project</div>
+        <h3>Amazon Ads Measurement Lab</h3>
+        <p class="muted">A fictional Amazon.ca brand advertises on Sponsored Products, Sponsored Brands, Prime Video ads and Amazon DSP. The lab answers what its marketing lead would ask.</p>
+        <ul>
+          <li><b>Incrementality:</b> randomized holdout, +30% lift, 2.46x iROAS</li>
+          <li><b>Attribution:</b> four models compared against causal truth</li>
+          <li><b>Segmentation:</b> who responds to ads, and who to stop paying for</li>
+          <li><b>Marketing mix model:</b> R² 0.975 and a budget optimizer</li>
+          <li><b>SQL:</b> 5-table schema, CTEs and window functions, all visible</li>
+        </ul>
+        <div class="actions">
+          <a class="btn orange" href="https://chinmayyhere-debug.github.io/amazon-ads-lab/">Open the full lab</a>
+          <a class="btn light" href="https://github.com/chinmayyhere-debug/ad-measurement-lab">View the code</a>
+        </div>
+      </div>
+    </div>
+  </div></section>
+
+  <section id="experience"><div class="panel">
+    <h2>Experience</h2>
+    <div class="jobs">
+      <div class="job"><div class="when">Jul 2025 – Present</div><div>
+        <h3>Accounting Processing Officer, Insolvency <span class="now">Current</span></h3><div class="co">CIBC · Toronto</div>
+        <ul><li>Review financial information and administer insolvency accounts under the Bankruptcy and Insolvency Act.</li>
+        <li>Work with Legal, Compliance and branch teams to turn complex requirements into clear, documented decisions.</li></ul></div></div>
+      <div class="job"><div class="when">Oct 2024 – Jun 2025</div><div>
+        <h3>Fraud / Dispute Analyst</h3><div class="co">CIBC · Toronto</div>
+        <ul><li>Investigated 10,000+ card fraud and dispute cases, analyzing customer transaction histories in TSYS and Mastercom.</li>
+        <li>Spotted recurring patterns across cases and reported findings to stakeholders and customers.</li></ul></div></div>
+      <div class="job"><div class="when">Feb 2024 – Sep 2024</div><div>
+        <h3>IT Audit Intern (Co-op)</h3><div class="co">SAV Associates · Toronto</div>
+        <ul><li>Tested controls for SOC 1 and SOC 2 engagements and turned findings into recommendations for clients.</li></ul></div></div>
+    </div>
+  </div></section>
+
+  <section id="skills"><div class="panel">
+    <h2>Skills</h2>
+    <div class="cols3">
+      <div><h4>Measurement</h4><div class="tags"><span>Incrementality</span><span>Marketing mix modeling</span><span>Attribution</span><span>Segmentation</span><span>Hypothesis testing</span><span>Bootstrap CIs</span></div></div>
+      <div><h4>Data &amp; tools</h4><div class="tags"><span>SQL</span><span>Python</span><span>pandas</span><span>scikit-learn</span><span>SciPy</span><span>Tableau</span><span>Excel</span><span>Git</span></div></div>
+      <div><h4>Business</h4><div class="tags"><span>Executive recommendations</span><span>Stakeholder communication</span><span>Banking data</span><span>Documentation</span></div></div>
+    </div>
+  </div></section>
+
+  <section id="credentials"><div class="panel">
+    <div class="cols2">
+      <div><h4>Certifications</h4><div class="list">
+        <a href="https://catalog-education.oracle.com/ords/certview/sharebadge?id=B0A8BCA12ED0216A5BC0D1DC536C17BB16BBDB4F5042D15846E7DD30FBFF5EA1"><span>OCI 2025 Data Science Professional</span><span>Oracle ↗</span></a>
+        <a href="https://catalog-education.oracle.com/ords/certview/sharebadge?id=A84F886022AEF60CE97537E8512ED09E5FCCC934D920688434671597C1043241"><span>OCI 2025 Generative AI Professional</span><span>Oracle ↗</span></a>
+        <a href="https://catalog-education.oracle.com/ords/certview/sharebadge?id=C83ED1785215B0623587E0444589084D8523FD7D251ECF18BA44A19D58F71374"><span>Oracle Database@AWS Architect Professional</span><span>Oracle ↗</span></a>
+        <a href="https://coursera.org/share/eb5eae29109ffc56c91c5a63443f943a"><span>Fundamentals of Building AI Agents</span><span>IBM ↗</span></a>
+        <a href="https://www.skills.google/public_profiles/d9a2387e-ea0e-4309-96e0-f2c8b84246f9"><span>Cloud Skills Boost, Diamond League</span><span>Google ↗</span></a>
+      </div></div>
+      <div><h4>Education</h4><div class="list">
+        <div><span>Graduate Certificate, AI &amp; Data Science<br><span class="muted" style="font-size:13px">Loyalist College</span></span><span>2023 – 2024</span></div>
+        <div><span>B.Eng, Computer Engineering<br><span class="muted" style="font-size:13px">Gujarat Technological University</span></span><span>2018 – 2022</span></div>
+      </div></div>
+    </div>
+  </div></section>
+
+  <section id="contact"><div class="panel">
+    <div class="contact">
+      <div><h2>Let's talk</h2><p class="muted" style="margin:0">Open to analytics and ad measurement roles in Toronto or remote in Canada.</p></div>
+      <div class="row">
+        <span class="mail" id="mail">chinmayy.parmar@gmail.com</span>
+        <button class="btn yellow" id="copy" type="button">Copy email</button>
+        <span id="copied" aria-live="polite"></span>
+      </div>
+    </div>
+  </div></section>
+</main>
+
+<footer><div class="wrap">
+  <span>© 2026 Chinmay Parmar · Independent portfolio, not affiliated with Amazon. The lab uses a fictional brand and simulated data.</span>
+  <span><a href="https://www.linkedin.com/in/chinmayyhere/">LinkedIn</a><a href="https://github.com/chinmayyhere-debug">GitHub</a><a href="#top">Back to top</a></span>
+</div></footer>
+
+<script>
+/* 10-second demo */
+const DEMO = {
+  naive: { r1: .101, r2: .326, l1: "Didn't see an ad", l2: "Saw an ad", claim: "+223%", c2: "#232f3e",
+    verdict: "<b>Looks great, but it's misleading.</b> Ads reach shoppers who were already likely to buy, so this mostly measures who got targeted. Try the holdout test.",
+    cap: "Share of shoppers who bought during the 30-day campaign." },
+  hold: { r1: .235, r2: .306, l1: "No ads (random 10% held out)", l2: "Eligible for ads", claim: "+30%", c2: "#ff9900",
+    verdict: "<b>This is the real effect.</b> Two random, identical groups, so the gap is what the ads caused: about $135K in extra sales and 2.46x incremental ROAS.",
+    cap: "Randomized holdout, 40,000 shoppers. z = 10, so the lift is not luck." },
+};
+function show(m) {
+  const d = DEMO[m], $ = id => document.getElementById(id);
+  $("t-naive").setAttribute("aria-pressed", m === "naive"); $("t-hold").setAttribute("aria-pressed", m === "hold");
+  $("l1").textContent = d.l1; $("l2").textContent = d.l2;
+  $("v1").textContent = (d.r1 * 100).toFixed(1) + "%"; $("v2").textContent = (d.r2 * 100).toFixed(1) + "%";
+  $("f1").style.width = (d.r1 / .4 * 100) + "%"; $("f1").style.background = "#bfc5c5";
+  $("f2").style.width = (d.r2 / .4 * 100) + "%"; $("f2").style.background = d.c2;
+  $("claim").textContent = d.claim; $("claim").style.color = m === "hold" ? "#c45500" : "#0f1111";
+  $("verdict").innerHTML = d.verdict; $("cap").textContent = d.cap;
+}
+document.getElementById("t-naive").onclick = () => show("naive");
+document.getElementById("t-hold").onclick = () => show("hold");
+show("naive");
+
+/* copy email */
+document.getElementById("copy").addEventListener("click", () => {
+  const out = document.getElementById("copied");
+  const sel = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById("mail")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); out.textContent = "Selected"; };
+  try { navigator.clipboard.writeText("chinmayy.parmar@gmail.com").then(() => { out.textContent = "Copied"; }, sel); } catch (e) { sel(); }
+});
+</script>
+<script src="assistant.js"></script>
+</body>
+</html>
