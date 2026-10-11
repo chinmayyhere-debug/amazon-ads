@@ -1,7 +1,7 @@
 /* Search-bar assistant: answers come only from Chinmay's resume and the Ads lab.
    No API, no keys. Unknown questions get an honest hand-off to Chinmay. */
 (function () {
-  const LAB = "https://chinmayyhere-debug.github.io/amazon-ads-lab/";
+  const LAB = "lab.html";
   const QA = [
     { id: "who", chip: "Who is Chinmay?",
       keys: ["who", "about", "yourself", "himself", "introduce", "summary", "name", "tell me about him"],

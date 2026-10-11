@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactive Amazon Ads measurement lab by Chinmay Parmar: holdout lift test, attribution, segmentation, marketing mix model and SQL.">
+<title>Amazon Ads Measurement Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: matches the portfolio. Fixed glass nav with a back link and section tabs; one 1080px column; each study is a glass panel with question, plain-words line, controls and chart. Monochrome. */
+:root {
+  color-scheme: light;
+  --bg: #fbfbfb;
+  --panel: #ffffff;
+  --bg-alt: #f2f2f0;
+  --line: #e4e4e2;
+  --ink: #0a0a0a;
+  --ink-2: #4a4a4a;
+  --muted: #8a8a8a;
+  --g1: #0a0a0a; --g2: #4f4f4f; --g3: #8f8f8f; --g4: #cfcfcf;
+  --radius: 18px;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --glass-bg: linear-gradient(135deg, rgba(255,255,255,.8), rgba(255,255,255,.45));
+  --glass-shadow: 0 10px 34px -14px rgba(10,10,10,.16), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 0 rgba(10,10,10,.04);
+  --f-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --f-serif: "Newsreader", Georgia, serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15.5px; line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+::selection { background: var(--ink); color: #fff; }
+a { color: var(--ink); }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
+.mono { font-family: var(--f-mono); font-size: .92em; }
+.wash { position: fixed; border-radius: 50%; filter: blur(110px); pointer-events: none; z-index: 0; }
+.wash.a { width: 520px; height: 520px; background: rgba(10,10,10,.06); top: -160px; left: -160px; }
+.wash.b { width: 480px; height: 480px; background: rgba(10,10,10,.045); top: 45%; right: -200px; }
+
+/* nav */
+#nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; padding-top: env(safe-area-inset-top, 0px); background: linear-gradient(135deg, rgba(255,255,255,.86), rgba(255,255,255,.66)); -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%); box-shadow: 0 8px 24px -18px rgba(10,10,10,.25); }
+#nav .in { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 18px; padding: 12px 28px; }
+.back { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; letter-spacing: -.01em; text-decoration: none; white-space: nowrap; }
+.back::before { content: "←"; font-weight: 500; color: var(--muted); }
+#nav .tabs-nav { display: flex; gap: 4px; margin-left: auto; overflow-x: auto; scrollbar-width: none; }
+#nav .tabs-nav::-webkit-scrollbar { display: none; }
+#nav .tabs-nav a { font-size: 13.5px; font-weight: 500; color: var(--ink-2); text-decoration: none; padding: 6px 11px; border-radius: 99px; white-space: nowrap; transition: background .2s; }
+#nav .tabs-nav a:hover { background: rgba(10,10,10,.05); color: var(--ink); }
+#nav .tabs-nav a.on { background: var(--ink); color: #fff; }
+@media (max-width: 760px) { #nav .in { flex-wrap: wrap; padding: 10px 16px; gap: 6px; } #nav .tabs-nav { margin-left: 0; width: 100%; } }
+
+main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding-inline: 28px; padding-block: 0 80px; }
+@media (max-width: 600px) { main { padding-inline: 16px; } }
+
+/* overview */
+.hero { padding-block: 130px 8px; }
+.tag { display: inline-flex; gap: 9px; align-items: center; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; padding: 7px 14px; border-radius: 99px; background: #fff; box-shadow: 0 2px 10px -4px rgba(0,0,0,.12); }
+.tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+h1 { font-size: clamp(2.6rem, 7vw, 5.2rem); line-height: .98; letter-spacing: -.045em; font-weight: 900; margin: 24px 0 24px; max-width: 14ch; text-wrap: balance; }
+h1 .lo { color: #4f4f4f; font-weight: 500; }
+h2 { font-size: clamp(1.8rem, 3.8vw, 2.8rem); line-height: 1.03; letter-spacing: -.04em; font-weight: 800; margin: 6px 0 12px; max-width: 20ch; text-wrap: balance; }
+h3 { font-size: 15px; font-weight: 700; margin: 0 0 8px; letter-spacing: -.01em; }
+p { margin: 0 0 12px; max-width: 66ch; }
+.lede { font-size: clamp(1.05rem, 1.6vw, 1.2rem); color: var(--ink-2); max-width: 40em; }
+.note { font-size: 13px; color: var(--muted); }
+
+.story { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 34px; overflow: hidden; }
+.story > div { padding: 22px 24px; border-left: 1px solid var(--line); min-width: 0; }
+.story > div:first-child { border-left: 0; }
+.story > div:last-child { background: var(--ink); color: #fff; }
+.story > div:last-child .d { color: #bdbdbd; } .story > div:last-child .k { color: #9a9a9a; }
+.story .k { font-family: var(--f-mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.story .t { font-weight: 700; margin: 8px 0 6px; font-size: 16.5px; letter-spacing: -.015em; line-height: 1.3; }
+.story .d { font-size: 13.5px; color: var(--ink-2); }
+@media (max-width: 760px) { .story { grid-template-columns: 1fr; } .story > div { border-left: 0; border-top: 1px solid var(--line); } .story > div:first-child { border-top: 0; } }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 26px; border-top: 1px solid var(--ink); }
+.kpi { padding: 18px 16px 4px 0; }
+.kpi b { display: block; font-size: clamp(1.6rem, 2.8vw, 2.1rem); font-weight: 800; letter-spacing: -.035em; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.kpi span { font-size: 12.5px; color: var(--ink-2); }
+
+.reqs { margin-top: 40px; padding: 8px 24px 4px; }
+.reqs .eyebrow { margin: 16px 0 4px; }
+.reqs table td:first-child { color: var(--ink); font-weight: 500; }
+.reqs td { white-space: normal; }
+.reqs a { font-weight: 600; text-decoration: none; white-space: nowrap; }
+
+/* studies */
+section.study { margin-top: 64px; padding: clamp(22px, 3.4vw, 40px); scroll-margin-top: 74px; position: relative; background: var(--glass-bg); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(255,255,255,.9); box-shadow: var(--glass-shadow); border-radius: 24px; }
+.glass { background: var(--glass-bg); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(255,255,255,.9); box-shadow: var(--glass-shadow); border-radius: var(--radius); }
+.eyebrow { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .14em; }
+.q { font-size: 1.05rem; color: var(--ink-2); }
+.plain { display: flex; gap: 14px; align-items: flex-start; background: var(--ink); color: #fff; border-radius: 14px; padding: 14px 18px; margin: 18px 0 4px; }
+.plain .pk { font-family: var(--f-serif); font-style: italic; font-size: 15px; color: #bdbdbd; white-space: nowrap; }
+.plain p { margin: 0; color: #fff; }
+@media (max-width: 520px) { .plain { flex-direction: column; gap: 4px; } }
+.split { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 22px; margin-top: 22px; align-items: start; }
+.split > * { min-width: 0; }
+@media (max-width: 880px) { .split { grid-template-columns: 1fr; } }
+.controls { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 18px; }
+.ctl-label, .controls label { font-size: 11.5px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 7px; text-transform: uppercase; letter-spacing: .1em; }
+.seg { display: flex; flex-wrap: wrap; gap: 3px; background: var(--bg-alt); border-radius: 10px; padding: 3px; }
+.seg button { flex: 1 1 auto; font: inherit; font-size: 13px; font-weight: 500; border: 0; background: transparent; color: var(--ink-2); padding: 7px 10px; border-radius: 8px; cursor: pointer; transition: background .2s, color .2s; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+input[type=range] { width: 100%; accent-color: var(--ink); }
+.big { font-size: 2.2rem; font-weight: 800; letter-spacing: -.04em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.sub { font-size: 12.5px; color: var(--ink-2); margin-top: 5px; }
+.readout { font-family: var(--f-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; line-height: 1.7; }
+.verdict { display: inline-flex; gap: 7px; align-items: center; font-size: 12.5px; font-weight: 600; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--ink); }
+.verdict.solid { background: var(--ink); color: #fff; }
+.verdict.ghost { border-style: dashed; color: var(--ink-2); border-color: var(--g3); }
+.chart { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; position: relative; overflow-x: auto; }
+.chart svg { display: block; width: 100%; height: auto; min-width: 460px; }
+svg text { font-family: var(--f-ui); fill: var(--ink-2); font-size: 12px; }
+svg .lbl { fill: var(--ink); font-weight: 500; }
+svg .val { font-family: var(--f-mono); fill: var(--ink); font-size: 11.5px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--ink-2); margin-top: 12px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+.legend i.tick { width: 2px; height: 14px; border-radius: 0; background: var(--ink); }
+.legend i.ring { background: transparent; border: 2px solid var(--ink); border-radius: 50%; }
+.takeaway { margin-top: 18px; padding: 14px 18px; border-radius: 14px; background: var(--bg-alt); }
+.takeaway b { font-family: var(--f-serif); font-style: italic; font-weight: 500; font-size: 15px; display: block; color: var(--ink-2); margin-bottom: 2px; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: #fff; font-size: 12px; padding: 7px 10px; border-radius: 8px; line-height: 1.5; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); z-index: 5; font-variant-numeric: tabular-nums; box-shadow: 0 6px 18px -6px rgba(0,0,0,.35); }
+.mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; margin-top: 14px; overflow: hidden; }
+.mini > div { padding: 14px 16px; border-left: 1px solid var(--line); }
+.mini > div:first-child { border-left: 0; }
+.mini span { display: block; font-size: 12px; color: var(--ink-2); }
+.mini b { font-size: 1.45rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { .mini > div { border-left: 0; border-top: 1px solid var(--line); } .mini > div:first-child { border-top: 0; } }
+
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { padding: 10px 10px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; padding-left: 0; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+tr.pick { cursor: pointer; }
+tr.pick:hover td { background: rgba(10,10,10,.03); }
+tr.pick.on td { background: var(--ink); color: #fff; }
+tr.pick.on td:first-child { padding-left: 10px; border-radius: 10px 0 0 10px; }
+tr.pick.on td:last-child { border-radius: 0 10px 10px 0; }
+tr.pick.on .pill { color: #fff; border-color: #fff; }
+.pill { font-family: var(--f-mono); font-size: 11px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--ink); }
+.pill.no { border-style: dashed; color: var(--muted); border-color: var(--g3); }
+
+.ch-row { display: grid; gap: 3px; }
+.ch-row .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ch-row .name { font-size: 13.5px; font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0; margin: 0; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 7px; }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.btn { font: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 9px 10px; border-radius: 99px; cursor: pointer; transition: border-color .2s; }
+.btn:hover { border-color: var(--ink); }
+.btn.primary { grid-column: 1 / -1; background: var(--ink); color: #fff; border-color: var(--ink); }
+.curves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.curves .chart { padding: 12px; }
+.curves .chart svg { min-width: 0; }
+@media (max-width: 560px) { .curves { grid-template-columns: 1fr; } }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 20px 0 12px; }
+.tabs button { font: inherit; font-family: var(--f-mono); font-size: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); padding: 7px 12px; border-radius: 99px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+pre.code { background: #0a0a0a; color: #f2f2f2; border-radius: 16px; padding: 20px 22px; overflow-x: auto; font-family: var(--f-mono); font-size: 12.5px; line-height: 1.65; margin: 0; }
+pre.code .kw { color: #ffffff; font-weight: 600; } pre.code .cm { color: #7d7d7d; font-style: italic; } pre.code .fn { color: #fff; text-decoration: underline; text-decoration-color: #5a5a5a; text-underline-offset: 3px; }
+pre.code .tx { color: #c4c4c4; }
+
+.recs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+.recs > div { padding: 20px 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; }
+.recs > div:first-child { background: var(--ink); color: #fff; border-color: var(--ink); }
+.recs > div:first-child .d { color: #c4c4c4; } .recs > div:first-child .n { color: #9a9a9a; }
+.recs .n { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.recs .t { font-weight: 700; font-size: 17px; letter-spacing: -.02em; margin: 6px 0 6px; }
+.recs .d { font-size: 14px; color: var(--ink-2); }
+.recs .imp { font-family: var(--f-mono); font-size: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(128,128,128,.25); }
+@media (max-width: 680px) { .recs { grid-template-columns: 1fr; } }
+.stack { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.stack span { font-size: 12px; border-radius: 8px; padding: 4px 10px; background: var(--bg-alt); }
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+.next { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 10px; }
+.next a { text-decoration: none; display: inline-flex; gap: 8px; background: var(--ink); color: #fff; font-weight: 600; font-size: 14px; padding: 11px 18px; border-radius: 99px; }
+.next a.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } html { scroll-behavior: auto; } }
+
+/* ===== Amazon-style theme (matches the portfolio) ===== */
+:root {
+  --bg: #eaeded; --panel: #ffffff; --bg-alt: #f7fafa; --line: #d5d9d9;
+  --ink: #0f1111; --ink-2: #565959; --muted: #6f7373;
+  --g1: #ff9900; --g2: #232f3e; --g3: #879596; --g4: #c8cdcd;
+  --top: #131921; --nav: #232f3e; --orange: #ff9900; --teal: #007185;
+  --f-ui: "Noto Sans", Arial, sans-serif;
+  --f-serif: "Noto Sans", Arial, sans-serif;
+}
+.wash { display: none; }
+#nav { background: var(--top); box-shadow: none; }
+#nav .back { color: #fff; }
+#nav .back::before { color: var(--orange); }
+#nav .tabs-nav a { color: #dcdcdc; border: 1px solid transparent; border-radius: 3px; }
+#nav .tabs-nav a:hover { background: transparent; border-color: #fff; color: #fff; }
+#nav .tabs-nav a.on { background: var(--orange); color: var(--ink); border-color: var(--orange); }
+h1 { font-weight: 800; letter-spacing: -.03em; }
+h1 .lo { color: #e47911; font-weight: 800; }
+h2 { font-weight: 700; letter-spacing: -.02em; }
+.tag { background: var(--nav); color: #fff; box-shadow: none; }
+.tag::before { background: var(--orange); }
+section.study, .glass { background: var(--panel); -webkit-backdrop-filter: none; backdrop-filter: none; border: 0; box-shadow: none; border-radius: 8px; }
+.story { background: var(--panel); border-radius: 8px; }
+.story > div:last-child { background: var(--nav); }
+.story > div:last-child .t { color: #fff; }
+.kpis { border-top: 3px solid var(--orange); }
+.eyebrow { color: #e47911; letter-spacing: .1em; }
+.plain { background: var(--nav); }
+.plain .pk { font-style: normal; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--orange); }
+.takeaway { background: #fff8ec; border-left: 3px solid var(--orange); border-radius: 6px; }
+.takeaway b { font-style: normal; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #c45500; }
+.controls { border-radius: 8px; }
+.chart, .mini { border-radius: 8px; }
+.seg { background: #f0f2f2; border-radius: 8px; }
+.seg button[aria-pressed="true"] { background: #fff; color: var(--teal); box-shadow: inset 0 0 0 2px var(--teal); }
+input[type=range] { accent-color: #e47911; }
+.verdict.solid { background: var(--nav); border-color: var(--nav); }
+.btn { border-radius: 99px; }
+.btn.primary { background: var(--orange); color: var(--ink); border-color: #e88b00; }
+.btn.primary:hover { background: #f08804; }
+.tabs button[aria-selected="true"] { background: var(--nav); border-color: var(--nav); }
+pre.code { background: var(--top); border-radius: 8px; }
+pre.code .kw { color: #ffb84d; }
+tr.pick.on td { background: var(--nav); }
+.recs > div { border-radius: 8px; }
+.recs > div:first-child { background: var(--nav); border-color: var(--nav); }
+.next a { background: var(--orange); color: var(--ink); }
+.next a.ghost { background: #fff; color: var(--ink); }
+footer { border-top-color: var(--line); }
+.disclaim { margin-top: 10px; font-size: 12px; color: var(--muted); }
+</style>
+
+</head><body style="margin:0">
+<div class="wash a"></div><div class="wash b"></div>
+<header id="nav"><div class="in">
+  <a class="back" href="index.html">chinmay.parmar</a>
+  <nav class="tabs-nav" aria-label="Lab sections">
+    <a href="#overview" data-s="overview">Overview</a><a href="#lift" data-s="lift">Lift test</a><a href="#attribution" data-s="attribution">Attribution</a><a href="#audiences" data-s="audiences">Audiences</a><a href="#planner" data-s="planner">Budget planner</a><a href="#sql" data-s="sql">SQL</a><a href="#recs" data-s="recs">Actions</a>
+  </nav>
+</div></header>
+<main>
+
+<section id="overview" class="hero">
+  <span class="tag">Amazon Ads measurement lab · Chinmay Parmar</span>
+  <h1>Which Amazon ads actually <span class="lo">sold more coffee?</span></h1>
+  <p class="lede">Northfield Coffee Co. sells on Amazon.ca and spends about $140K a week across Sponsored Products, Sponsored Brands, Prime Video ads and Amazon DSP video. Their marketing lead asks three questions. This lab answers them with SQL and Python, and lets you test every answer yourself.</p>
+
+  <div class="story">
+    <div><div class="k">The question</div><div class="t">Did our holiday campaign cause extra sales?</div><div class="d">And which ad product deserves the credit and the budget?</div></div>
+    <div><div class="k">The method</div><div class="t">Holdout test, attribution, segments, MMM</div><div class="d">40,000 shoppers, 218,000 ad impressions, 3 years of weekly spend.</div></div>
+    <div><div class="k">The answer</div><div class="t">Yes, +30% lift. Shift $19K/week to Sponsored Products.</div><div class="d">Same budget, +4.6% incremental sales.</div></div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="reqs glass">
+    <div class="eyebrow" style="margin-bottom:6px">How this maps to the role</div>
+    <div class="tbl"><table>
+      <thead><tr><th>Job requirement</th><th style="text-align:left">Where it is shown</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Advanced SQL, complex queries across multiple tables</td><td style="text-align:left">5 queries, CTEs, window functions, 5-table schema</td><td><a href="#sql">Open →</a></td></tr>
+        <tr><td>Incrementality</td><td style="text-align:left">Randomized holdout, z-test, bootstrap CI, iROAS, new-to-brand</td><td><a href="#lift">Open →</a></td></tr>
+        <tr><td>Media attribution</td><td style="text-align:left">First, last, linear and Markov vs. causal truth</td><td><a href="#attribution">Open →</a></td></tr>
+        <tr><td>Segmentation and data science modeling in Python</td><td style="text-align:left">RFM features, K-Means, lift by segment</td><td><a href="#audiences">Open →</a></td></tr>
+        <tr><td>Marketing mix modeling</td><td style="text-align:left">Adstock + saturation MMM, budget optimizer</td><td><a href="#planner">Open →</a></td></tr>
+        <tr><td>Recommendations for executive stakeholders</td><td style="text-align:left">Four quantified actions</td><td><a href="#recs">Open →</a></td></tr>
+      </tbody></table></div>
+  </div>
+  <p class="note" style="margin-top:16px">Northfield Coffee Co. is fictional and all data is simulated, so every method can be checked against a known true answer. Results reflect this advertiser's simulated settings (audiences, frequency, budget), not the real performance of any Amazon Ads product.</p>
+</section>
+
+<!-- 01 LIFT -->
+<section class="study" id="lift">
+  <div class="eyebrow">01 · Incrementality</div>
+  <h2>The campaign worked. The easy number exaggerates it 7x.</h2>
+  <p class="q">During the 30-day holiday campaign, 10% of shoppers were randomly held out of all Northfield ads.</p>
+  <div class="plain"><span class="pk">In plain words</span><p>Two identical groups of shoppers, one saw ads and one didn't. The difference in how many bought coffee is what the ads really caused.</p></div>
+  <div class="split">
+    <div class="controls">
+      <div><span class="ctl-label">Compare</span>
+        <div class="seg" role="group" aria-label="Comparison"><button id="m-holdout" aria-pressed="true">Holdout test</button><button id="m-naive" aria-pressed="false">Saw ad vs. didn't</button></div></div>
+      <div><span class="ctl-label">Measured lift</span><div class="big" id="lift-big"></div><div class="sub" id="lift-sub"></div></div>
+      <div><label for="cost">Campaign media cost <span class="readout" id="cost-out" style="float:right;text-transform:none;letter-spacing:0;color:var(--ink)"></span></label>
+        <input type="range" id="cost" min="20000" max="150000" step="5000" value="55000"></div>
+      <div><span class="ctl-label">Incremental ROAS</span><div class="big" id="iroas"></div><div class="sub" id="iroas-ci"></div><div style="margin-top:10px" id="iroas-verdict"></div></div>
+    </div>
+    <div>
+      <div class="chart"><svg id="c-lift" viewBox="0 0 620 210" role="img" aria-label="Purchase rate by group"></svg></div>
+      <div class="mini" id="ntb"></div>
+      <div class="takeaway" id="lift-take"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 ATTRIBUTION -->
+<section class="study" id="attribution">
+  <div class="eyebrow">02 · Media attribution</div>
+  <h2>Attribution rewards reach, not impact</h2>
+  <p class="q">Each model splits credit for a purchase across the ads a shopper saw. The black tick shows each product's true share of the extra purchases, recorded by the simulator.</p>
+  <div class="plain"><span class="pk">In plain words</span><p>The ad seen most often is not always the ad that changed the decision. Credit models count views; the lift test measures impact.</p></div>
+  <div class="split">
+    <div class="controls">
+      <div><span class="ctl-label">Model</span><div class="seg" role="group" aria-label="Attribution model" id="attr-models"></div></div>
+      <div id="attr-detail"></div>
+      <p class="note" style="margin:0">First and last touch use SQL <span class="mono">ROW_NUMBER()</span> windows over each journey. Markov credits a product by how many purchases disappear when it is removed from the paths.</p>
+    </div>
+    <div>
+      <div class="chart"><svg id="c-attr" viewBox="0 0 620 240" role="img" aria-label="Credit by ad product versus truth"></svg>
+        <div class="legend"><span><i style="background:var(--g4)"></i><span id="attr-leg">Model credit</span></span><span><i class="tick"></i>True share of extra purchases</span></div></div>
+      <div class="takeaway"><b>Takeaway</b>Every rule-based model gives broad-reach DSP video about 3.6x the credit it earned, and gives Sponsored Products 22 points too little. Budget decisions based on these models would move money the wrong way.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 AUDIENCES -->
+<section class="study" id="audiences">
+  <div class="eyebrow">03 · Customer segmentation</div>
+  <h2>Who actually responds to ads</h2>
+  <p class="q">K-Means groups shoppers by recency, frequency, spend, tenure and Prime status, using only the year <em>before</em> the campaign. Then the holdout lift is measured inside each group. Select a segment.</p>
+  <div class="plain"><span class="pk">In plain words</span><p>Loyal coffee buyers buy more when reminded. Shoppers who stopped buying a year ago ignore the ads, so those impressions are wasted.</p></div>
+  <div class="split">
+    <div class="controls" id="seg-card"></div>
+    <div>
+      <div class="chart"><svg id="c-seg" viewBox="0 0 620 196" role="img" aria-label="Lift by segment with 95% confidence intervals"></svg>
+        <div class="legend"><span><i class="ring"></i>Lift</span><span><i style="background:var(--g4);height:4px;vertical-align:3px"></i>95% confidence interval</span></div></div>
+      <div class="tbl" style="margin-top:10px"><table id="t-seg"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 PLANNER -->
+<section class="study" id="planner">
+  <div class="eyebrow">04 · Marketing mix model</div>
+  <h2>Plan next quarter's budget</h2>
+  <p class="q">An MMM fit on 156 weeks of spend and sales. It models carryover (an ad keeps working after the week it ran) and saturation (each extra dollar does less), with trend, seasonality, Q4 and promotions controlled for.</p>
+  <div class="plain"><span class="pk">In plain words</span><p>Drag the sliders to set weekly spend. The model predicts the extra sales. Where a curve is flattening, money is better spent elsewhere.</p></div>
+  <div class="split">
+    <div class="controls" id="sliders">
+      <div class="btns"><button class="btn" id="b-current">Today's mix</button><button class="btn" id="b-rec">Recommended</button><button class="btn primary" id="b-opt">Optimize my budget</button></div>
+    </div>
+    <div>
+      <div class="mini" id="plan-out" style="margin-top:0"></div>
+      <div class="curves" id="curves"></div>
+      <p class="note" style="margin-top:10px">Solid dot: your spend. Dashed line: today's spend. "Optimize" keeps your total and gives each next $500 to the product with the best return.</p>
+    </div>
+  </div>
+  <h3 style="margin-top:36px">Model accuracy · hover the chart</h3>
+  <div class="chart"><svg id="c-fit" viewBox="0 0 960 250" role="img" aria-label="Weekly sales actual versus model"></svg>
+    <div class="legend"><span><i style="background:var(--g4)"></i>Actual weekly sales</span><span><i style="background:var(--g1)"></i>Model</span><span><i style="background:var(--panel);border:1px solid var(--line)"></i>Last 13 weeks held out from fitting</span></div></div>
+  <div class="tbl" style="margin-top:12px"><table id="t-roas"></table></div>
+  <div class="takeaway" id="mmm-take"></div>
+</section>
+
+<!-- 05 SQL -->
+<section class="study" id="sql">
+  <div class="eyebrow">05 · Under the hood</div>
+  <h2>The SQL behind every number</h2>
+  <p class="q" id="sql-intro"></p>
+  <div class="tabs" role="tablist" id="sql-tabs"></div>
+  <pre class="code" id="sql-code"></pre>
+  <div style="margin-top:12px"><div class="note" id="sql-meta"></div><div class="tbl"><table id="sql-table"></table></div></div>
+</section>
+
+<!-- 06 RECS -->
+<section class="study" id="recs">
+  <div class="eyebrow">06 · For Northfield's leadership</div>
+  <h2>Four actions, quantified</h2>
+  <div class="recs" id="recs-list"></div>
+  <h3 style="margin-top:36px">What went wrong while building it</h3>
+  <p>My first MMM said Prime Video ads returned 10x. The truth was 2.85x. I had forced every coefficient to be positive, including seasonality terms that need to go negative, so the ads absorbed normal baseline sales. Constraining only the media coefficients fixed it, taking the fit from R² 0.83 to 0.975. A grid search over carryover settings also got stuck; a global optimizer did not.</p>
+  <div class="stack"><span>SQL</span><span>SQLite</span><span>Python</span><span>pandas</span><span>NumPy</span><span>SciPy</span><span>scikit-learn</span><span>Z-tests</span><span>Bootstrap</span><span>Markov chains</span><span>K-Means</span><span>Adstock</span><span>Hill saturation</span><span>Constrained optimization</span></div>
+</section>
+
+<div class="next"><a href="index.html">← Back to portfolio</a><a class="ghost" href="https://github.com/chinmayyhere-debug/ad-measurement-lab">View the code on GitHub</a><a class="ghost" href="index.html#contact">Contact me</a></div>
+<footer><span>Fictional advertiser, synthetic data. No real customer, advertiser or Amazon data was used.</span><span>Built by Chinmay Parmar · October 2026 · Independent portfolio, not affiliated with or endorsed by Amazon</span></footer>
+</main>
+
+<script>
+const D = {"inc": {"treatment_customers": 35970, "control_customers": 4030, "treatment_conv_rate": 0.3058, "control_conv_rate": 0.2347, "lift_pp": 0.07110000000000002, "relative_lift": 0.30293992330634867, "z_score": 10.007984871837392, "lift_ci95_pp": [0.05717551852000201, 0.08502448147999804], "incremental_sales": 135225.61800000005, "incremental_sales_per_customer_ci95": [2.7520063074860412, 4.720089473720518], "assumed_campaign_spend": 55000.0, "iroas": 2.458647600000001, "iroas_ci95": [1.7998121250958712, 3.0869385158132183], "naive_exposed_cr": 0.3259521700620018, "naive_unexposed_cr": 0.10096004955094456, "naive_relative_lift": 2.2285262488656556, "reach": 0.9102307478454268, "lift_on_reached_relative": 0.33281662262390765}, "ntb": {"treatment_ntb_share": 0.0166, "control_ntb_share": 0.0211, "incremental_purchasers": 2554.421836228287, "incremental_ntb_purchasers": 4.676099999999996, "ntb_share_of_incremental": 0.0018305903643951221}, "attr": {"converters_with_touches": 10672, "avg_touches": 8.017522488755622, "models": {"First touch": {"Sponsored Products": 0.3391116941529235, "Sponsored Brands": 0.2537481259370315, "Prime Video ads": 0.18656296851574214, "Amazon DSP video": 0.22057721139430284}, "Last touch": {"Sponsored Products": 0.34070464767616193, "Sponsored Brands": 0.25084332833583206, "Prime Video ads": 0.19284107946026988, "Amazon DSP video": 0.21561094452773613}, "Linear": {"Sponsored Products": 0.3419103648641702, "Sponsored Brands": 0.2555844992212703, "Prime Video ads": 0.1896121904174613, "Amazon DSP video": 0.2128929454971963}, "Markov (removal effect)": {"Sponsored Products": 0.284880637006339, "Sponsored Brands": 0.25469806651943483, "Prime Video ads": 0.2212780817638355, "Amazon DSP video": 0.23914321471039066}, "True incremental share": {"Sponsored Products": 0.5576133280249096, "Sponsored Brands": 0.18568022032281703, "Prime Video ads": 0.1967911605809557, "Amazon DSP video": 0.059915291071317614}}}, "seg": [{"segment": "Loyal high value", "customers": 12745, "share": 0.318625, "median_recency_days": 19.719, "avg_orders_12m": 10.021341702628481, "avg_spend_12m": 487.97312671635933, "prime_share": 0.9798352295017654, "control_conv_rate": 0.3784219001610306, "treatment_conv_rate": 0.485612448926367, "lift_pp": 0.1071905487653364, "lift_ci95_pp": [0.07870256726754254, 0.13567853026313026], "relative_lift": 0.28325672673733576, "incremental_sales_per_customer": 5.509667788127235, "avg_impressions": 7.76875597670173}, {"segment": "Engaged regulars", "customers": 13193, "share": 0.329825, "median_recency_days": 56.27, "avg_orders_12m": 4.9445918290002275, "avg_spend_12m": 240.18406730842113, "prime_share": 0.0, "control_conv_rate": 0.20380228136882128, "treatment_conv_rate": 0.26275467250378853, "lift_pp": 0.05895239113496725, "lift_ci95_pp": [0.03577785752879519, 0.0821269247411393], "relative_lift": 0.2892626654570222, "incremental_sales_per_customer": 3.6821636863242713, "avg_impressions": 5.713167199865297}, {"segment": "Occasional buyers", "customers": 10746, "share": 0.26865, "median_recency_days": 103.75399999999999, "avg_orders_12m": 3.2211985855201934, "avg_spend_12m": 152.41351944909732, "prime_share": 1.0, "control_conv_rate": 0.16490299823633156, "treatment_conv_rate": 0.21858094049105284, "lift_pp": 0.05367794225472128, "lift_ci95_pp": [0.03054361299934606, 0.0768122715100965], "relative_lift": 0.32551222736285523, "incremental_sales_per_customer": 2.495301012623109, "avg_impressions": 5.193820224719101}, {"segment": "Lapsed / low engagement", "customers": 3316, "share": 0.0829, "median_recency_days": 366.0, "avg_orders_12m": 0.03437876960193004, "avg_spend_12m": 0.48815741857659833, "prime_share": 0.49185765983112184, "control_conv_rate": 0.061946902654867256, "treatment_conv_rate": 0.06382264024185422, "lift_pp": 0.0018757375869869614, "lift_ci95_pp": [-0.025282720299738375, 0.029034195473712297], "relative_lift": 0.03027976390421809, "incremental_sales_per_customer": -0.5410821311470535, "avg_impressions": 3.8283506886126974}], "mmm": {"train_r2": 0.974941676864995, "holdout_mape_13wk": 0.027571731555418828, "channels": {"Sponsored Products": {"est_decay": 0.21, "true_decay": 0.2, "spend": 6959172.03, "est_contribution": 19513315.357549816, "true_contribution": 19073941.577705614, "est_roas": 2.803970827769552, "true_roas": 2.740834904, "marginal_roas": 2.133542190879919, "contribution_share_of_sales": 0.13571840975537589, "_coef": 273372.69926439604, "_half": 58480.70747788894}, "Sponsored Brands": {"est_decay": 0.49, "true_decay": 0.35, "spend": 3379490.16, "est_contribution": 4619744.973851788, "true_contribution": 5403897.717564387, "est_roas": 1.3669946515991003, "true_roas": 1.5990275, "marginal_roas": 1.4677156063940386, "contribution_share_of_sales": 0.03213110790442748, "_coef": 118611.52278858829, "_half": 90976.90983084543}, "Prime Video ads": {"est_decay": 0.66, "true_decay": 0.7, "spend": 6991629.3100000005, "est_contribution": 21938783.133812383, "true_contribution": 19922566.790333446, "est_roas": 3.137864174582846, "true_roas": 2.8494884611, "marginal_roas": 1.095014104388411, "contribution_share_of_sales": 0.152587948502409, "_coef": 193995.15370392366, "_half": 57723.61485338334}, "Amazon DSP video": {"est_decay": 0.61, "true_decay": 0.5, "spend": 4756702.619999999, "est_contribution": 4510873.690695555, "true_contribution": 4533964.268637573, "est_roas": 0.9483194664575343, "true_roas": 0.9531737894, "marginal_roas": 0.6606988810332609, "contribution_share_of_sales": 0.031373889710222765, "_coef": 58003.48223824251, "_half": 72598.99664561462}}, "reallocation": {"weekly_budget": 141583.29564102564, "current": {"Sponsored Products": 44610.077115384614, "Sponsored Brands": 21663.39846153846, "Prime Video ads": 44818.136602564104, "Amazon DSP video": 30491.683461538458}, "recommended": {"Sponsored Products": 63863.39354531615, "Sponsored Brands": 23778.547993636766, "Prime Video ads": 38695.5123713035, "Amazon DSP video": 15245.841730769349}, "weekly_incremental_sales_current": 341774.98318561446, "weekly_incremental_sales_recommended": 357637.5604210356, "uplift_pct": 0.046412341498986764, "true_uplift_pct_of_recommendation": 0.04873888007254146, "true_best_possible_uplift_pct": 0.05099669608254187}, "weekly_actual": [656600.0, 749004.0, 776682.0, 809614.0, 1048100.0, 970168.0, 1038316.0, 992816.0, 1063771.0, 1004462.0, 924865.0, 1104842.0, 1052978.0, 911391.0, 889497.0, 870112.0, 980754.0, 1026467.0, 960911.0, 949227.0, 916784.0, 905396.0, 870999.0, 879590.0, 872853.0, 851316.0, 854001.0, 897127.0, 906350.0, 932981.0, 954758.0, 926960.0, 858528.0, 836990.0, 791261.0, 796242.0, 863732.0, 859820.0, 872308.0, 883008.0, 889298.0, 700028.0, 804291.0, 822106.0, 798773.0, 771628.0, 754629.0, 761050.0, 843783.0, 863733.0, 806560.0, 896414.0, 803852.0, 804872.0, 829792.0, 806656.0, 949130.0, 953239.0, 978836.0, 977690.0, 992246.0, 927511.0, 1045099.0, 1069123.0, 1192460.0, 1015673.0, 1032616.0, 1057976.0, 959691.0, 871475.0, 913666.0, 929628.0, 947354.0, 938757.0, 1015315.0, 864842.0, 982469.0, 1031695.0, 997137.0, 973062.0, 1013368.0, 878950.0, 1010825.0, 978075.0, 1008628.0, 997375.0, 926633.0, 920466.0, 927734.0, 847568.0, 857048.0, 857761.0, 872043.0, 855759.0, 850229.0, 742361.0, 794332.0, 707539.0, 767859.0, 813757.0, 785850.0, 661078.0, 740352.0, 779157.0, 772279.0, 789335.0, 843344.0, 883928.0, 1078675.0, 1102642.0, 1085601.0, 1098753.0, 1090886.0, 1170007.0, 1105146.0, 1207907.0, 1167989.0, 1025437.0, 1018080.0, 1022889.0, 993832.0, 978448.0, 1044285.0, 1013029.0, 1134131.0, 1069006.0, 1085602.0, 1067734.0, 1136624.0, 1023772.0, 1065309.0, 956623.0, 1119705.0, 1057753.0, 1030182.0, 1140771.0, 992383.0, 899611.0, 886447.0, 913263.0, 864575.0, 822614.0, 834809.0, 780376.0, 905766.0, 884562.0, 841843.0, 842151.0, 831040.0, 849142.0, 770610.0, 783199.0, 768182.0, 797931.0, 827995.0, 821266.0], "weekly_fitted": [663215.0, 723100.0, 753690.0, 790619.0, 1031592.0, 993633.0, 999774.0, 1015287.0, 1050266.0, 1035405.0, 940603.0, 1063879.0, 1045145.0, 896925.0, 887746.0, 876763.0, 962306.0, 1035939.0, 995360.0, 970596.0, 907660.0, 897999.0, 887490.0, 878252.0, 871659.0, 854865.0, 868916.0, 905676.0, 921430.0, 914017.0, 936403.0, 930732.0, 861504.0, 826863.0, 798006.0, 801040.0, 867609.0, 868673.0, 886043.0, 875311.0, 874681.0, 719860.0, 797786.0, 824966.0, 791023.0, 767928.0, 771677.0, 775304.0, 839850.0, 844677.0, 842743.0, 906433.0, 790285.0, 801713.0, 817641.0, 816604.0, 946729.0, 979561.0, 1018142.0, 956423.0, 995756.0, 928685.0, 1053663.0, 1080026.0, 1179131.0, 1040409.0, 1035080.0, 1057111.0, 962994.0, 868764.0, 888025.0, 951421.0, 953197.0, 918432.0, 992363.0, 894263.0, 988642.0, 1004637.0, 989070.0, 963567.0, 1013904.0, 885976.0, 1003391.0, 982302.0, 1012364.0, 998922.0, 938022.0, 912799.0, 884046.0, 875549.0, 855928.0, 868549.0, 861246.0, 850827.0, 837396.0, 733164.0, 789218.0, 701864.0, 807933.0, 786543.0, 779307.0, 640966.0, 756422.0, 795702.0, 784288.0, 806256.0, 841833.0, 870525.0, 1115764.0, 1077152.0, 1073003.0, 1088368.0, 1107340.0, 1138564.0, 1144226.0, 1162792.0, 1172348.0, 1030796.0, 1024663.0, 1002623.0, 992216.0, 988806.0, 1051585.0, 979617.0, 1118321.0, 1079140.0, 1091980.0, 1102858.0, 1125884.0, 1063285.0, 1052631.0, 960119.0, 1071740.0, 1087223.0, 1038670.0, 1105155.0, 971295.0, 913187.0, 889800.0, 920743.0, 860094.0, 835651.0, 839758.0, 811731.0, 914612.0, 884413.0, 847082.0, 884499.0, 831138.0, 872896.0, 800313.0, 805806.0, 807498.0, 833879.0, 871546.0, 827408.0], "weeks_labels": ["2024-10-07", "2024-10-14", "2024-10-21", "2024-10-28", "2024-11-04", "2024-11-11", "2024-11-18", "2024-11-25", "2024-12-02", "2024-12-09", "2024-12-16", "2024-12-23", "2024-12-30", "2025-01-06", "2025-01-13", "2025-01-20", "2025-01-27", "2025-02-03", "2025-02-10", "2025-02-17", "2025-02-24", "2025-03-03", "2025-03-10", "2025-03-17", "2025-03-24", "2025-03-31", "2025-04-07", "2025-04-14", "2025-04-21", "2025-04-28", "2025-05-05", "2025-05-12", "2025-05-19", "2025-05-26", "2025-06-02", "2025-06-09", "2025-06-16", "2025-06-23", "2025-06-30", "2025-07-07", "2025-07-14", "2025-07-21", "2025-07-28", "2025-08-04", "2025-08-11", "2025-08-18", "2025-08-25", "2025-09-01", "2025-09-08", "2025-09-15", "2025-09-22", "2025-09-29", "2025-10-06", "2025-10-13", "2025-10-20", "2025-10-27", "2025-11-03", "2025-11-10", "2025-11-17", "2025-11-24", "2025-12-01", "2025-12-08", "2025-12-15", "2025-12-22", "2025-12-29", "2026-01-05", "2026-01-12", "2026-01-19", "2026-01-26", "2026-02-02", "2026-02-09", "2026-02-16", "2026-02-23", "2026-03-02", "2026-03-09", "2026-03-16", "2026-03-23", "2026-03-30", "2026-04-06", "2026-04-13", "2026-04-20", "2026-04-27", "2026-05-04", "2026-05-11", "2026-05-18", "2026-05-25", "2026-06-01", "2026-06-08", "2026-06-15", "2026-06-22", "2026-06-29", "2026-07-06", "2026-07-13", "2026-07-20", "2026-07-27", "2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24", "2026-08-31", "2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12", "2026-10-19", "2026-10-26", "2026-11-02", "2026-11-09", "2026-11-16", "2026-11-23", "2026-11-30", "2026-12-07", "2026-12-14", "2026-12-21", "2026-12-28", "2027-01-04", "2027-01-11", "2027-01-18", "2027-01-25", "2027-02-01", "2027-02-08", "2027-02-15", "2027-02-22", "2027-03-01", "2027-03-08", "2027-03-15", "2027-03-22", "2027-03-29", "2027-04-05", "2027-04-12", "2027-04-19", "2027-04-26", "2027-05-03", "2027-05-10", "2027-05-17", "2027-05-24", "2027-05-31", "2027-06-07", "2027-06-14", "2027-06-21", "2027-06-28", "2027-07-05", "2027-07-12", "2027-07-19", "2027-07-26", "2027-08-02", "2027-08-09", "2027-08-16", "2027-08-23", "2027-08-30", "2027-09-06", "2027-09-13", "2027-09-20", "2027-09-27"]}, "sql": [{"file": "01_lift_by_group.sql", "sql": "-- Holdout (ghost-ad style) lift test: conversion rate and sales per customer\n-- in exposed-eligible (treatment) vs held-out (control) groups during the\n-- 30-day campaign window (day_offset 0 to 30).\nWITH campaign_orders AS (\n    SELECT customer_id,\n           COUNT(*)          AS orders,\n           SUM(order_value)  AS sales\n    FROM brand_purchases\n    WHERE day_offset BETWEEN 0 AND 30\n    GROUP BY customer_id\n)\nSELECT c.test_group,\n       COUNT(*)                                             AS customers,\n       SUM(CASE WHEN co.orders > 0 THEN 1 ELSE 0 END)       AS converters,\n       ROUND(AVG(CASE WHEN co.orders > 0 THEN 1.0 ELSE 0 END), 4) AS conv_rate,\n       ROUND(SUM(COALESCE(co.sales, 0)), 2)                 AS sales,\n       ROUND(AVG(COALESCE(co.sales, 0)), 4)                 AS sales_per_customer\nFROM shoppers c\nLEFT JOIN campaign_orders co ON co.customer_id = c.customer_id\nGROUP BY c.test_group;\n", "rows": 2, "cols": ["test_group", "customers", "converters", "conv_rate", "sales", "sales_per_customer"], "data": [["control", "4030", "946", "0.2347", "55821.84", "13.8516"], ["treatment", "35970", "10998", "0.3058", "633466.37", "17.611"]]}, {"file": "02_attribution_paths.sql", "sql": "-- Build each converter's ordered path of channel touches before the purchase,\n-- plus first and last touch, using window functions.\nWITH first_purchase AS (\n    SELECT customer_id, MIN(day_offset) AS purchase_day\n    FROM brand_purchases\n    WHERE day_offset BETWEEN 0 AND 30\n    GROUP BY customer_id\n),\ntouches AS (\n    SELECT e.customer_id,\n           e.channel,\n           e.day_offset,\n           ROW_NUMBER() OVER (PARTITION BY e.customer_id ORDER BY e.day_offset ASC)  AS rn_first,\n           ROW_NUMBER() OVER (PARTITION BY e.customer_id ORDER BY e.day_offset DESC) AS rn_last\n    FROM ad_impressions e\n    JOIN first_purchase fp\n      ON fp.customer_id = e.customer_id\n     AND e.day_offset <= fp.purchase_day\n)\nSELECT customer_id,\n       MAX(CASE WHEN rn_first = 1 THEN channel END) AS first_touch,\n       MAX(CASE WHEN rn_last  = 1 THEN channel END) AS last_touch,\n       GROUP_CONCAT(channel, ' > ')                 AS path,\n       COUNT(*)                                     AS n_touches\nFROM (SELECT * FROM touches ORDER BY customer_id, day_offset)\nGROUP BY customer_id;\n", "rows": 10672, "cols": ["customer_id", "first_touch", "last_touch", "path", "n_touches"], "data": [["1", "Amazon DSP video", "Sponsored Products", "Amazon DSP video > Sponsored Products > Prime Video ads > Prime ", "6"], ["2", "Sponsored Brands", "Amazon DSP video", "Sponsored Brands > Sponsored Products > Sponsored Brands > Spons", "7"], ["5", "Amazon DSP video", "Prime Video ads", "Amazon DSP video > Sponsored Products > Amazon DSP video > Spons", "10"], ["6", "Amazon DSP video", "Amazon DSP video", "Amazon DSP video > Sponsored Brands > Sponsored Brands > Sponsor", "7"], ["7", "Sponsored Products", "Sponsored Products", "Sponsored Products > Prime Video ads > Prime Video ads > Sponsor", "11"]]}, {"file": "03_non_converter_paths.sql", "sql": "-- Paths for exposed customers who did NOT purchase in the window\n-- (needed by the Markov chain model, which learns from both outcomes).\nWITH converters AS (\n    SELECT DISTINCT customer_id FROM brand_purchases WHERE day_offset BETWEEN 0 AND 30\n)\nSELECT e.customer_id,\n       GROUP_CONCAT(e.channel, ' > ') AS path\nFROM (SELECT * FROM ad_impressions ORDER BY customer_id, day_offset) e\nLEFT JOIN converters cv ON cv.customer_id = e.customer_id\nWHERE cv.customer_id IS NULL\nGROUP BY e.customer_id;\n", "rows": 22069, "cols": ["customer_id", "path"], "data": [["3", "Sponsored Brands > Sponsored Brands > Prime Video ads > Prime Vi"], ["9", "Sponsored Products > Sponsored Products"], ["10", "Amazon DSP video > Sponsored Products > Sponsored Products > Ama"], ["14", "Prime Video ads > Prime Video ads"], ["17", "Sponsored Products > Prime Video ads > Sponsored Products > Prim"]]}, {"file": "04_rfm_features.sql", "sql": "-- Customer behaviour features from the 365 days BEFORE the campaign\n-- (recency, frequency, monetary), joined to customer attributes and\n-- campaign-window outcome. Pre-period features avoid leakage.\nWITH pre AS (\n    SELECT customer_id,\n           -MAX(day_offset)          AS recency_days,\n           COUNT(*)                  AS frequency,\n           SUM(order_value)          AS monetary,\n           AVG(order_value)          AS avg_order_value\n    FROM brand_purchases\n    WHERE day_offset < 0\n    GROUP BY customer_id\n),\npost AS (\n    SELECT customer_id, SUM(order_value) AS campaign_sales\n    FROM brand_purchases\n    WHERE day_offset BETWEEN 0 AND 30\n    GROUP BY customer_id\n),\nexp AS (\n    SELECT customer_id, COUNT(*) AS impressions, COUNT(DISTINCT channel) AS channels_seen\n    FROM ad_impressions\n    GROUP BY customer_id\n)\nSELECT c.customer_id,\n       c.tenure_days,\n       c.prime_member,\n       c.region,\n       c.test_group,\n       COALESCE(pre.recency_days, 366)   AS recency_days,\n       COALESCE(pre.frequency, 0)        AS frequency,\n       COALESCE(pre.monetary, 0)         AS monetary,\n       COALESCE(pre.avg_order_value, 0)  AS avg_order_value,\n       COALESCE(exp.impressions, 0)      AS impressions,\n       COALESCE(exp.channels_seen, 0)    AS channels_seen,\n       COALESCE(post.campaign_sales, 0)  AS campaign_sales\nFROM shoppers c\nLEFT JOIN pre  ON pre.customer_id  = c.customer_id\nLEFT JOIN post ON post.customer_id = c.customer_id\nLEFT JOIN exp  ON exp.customer_id  = c.customer_id;\n", "rows": 40000, "cols": ["customer_id", "tenure_days", "prime_member", "region", "test_group", "recency_days", "frequency", "monetary", "avg_order_value", "impressions", "channels_seen", "campaign_sales"], "data": [["1", "290", "1", "QC", "treatment", "54.989", "6", "338.66", "56.4433", "6", "3", "33.35"], ["2", "319", "1", "Atlantic", "treatment", "107.487", "9", "387.97", "43.1078", "7", "3", "73.76"], ["3", "447", "0", "ON", "treatment", "11.332", "14", "639.19", "45.6564", "8", "2", "0.0"], ["4", "320", "1", "ON", "control", "39.12", "3", "66.41", "22.1367", "0", "0", "27.43"], ["5", "442", "1", "AB", "treatment", "1.805", "14", "602.16", "43.0114", "10", "3", "96.01"]]}, {"file": "05_new_to_brand.sql", "sql": "-- New-to-brand: campaign purchasers with no purchase from the brand in the\n-- prior 12 months, split by test group, so we can see how much of the\n-- campaign's incremental lift came from shoppers new to the brand.\nWITH history AS (\n    SELECT customer_id,\n           SUM(CASE WHEN day_offset < 0 THEN 1 ELSE 0 END)              AS prior_orders,\n           SUM(CASE WHEN day_offset BETWEEN 0 AND 30 THEN 1 ELSE 0 END) AS campaign_orders\n    FROM brand_purchases\n    GROUP BY customer_id\n),\nlabelled AS (\n    SELECT s.customer_id,\n           s.test_group,\n           CASE WHEN COALESCE(h.campaign_orders, 0) > 0 THEN 1 ELSE 0 END AS purchased,\n           CASE WHEN COALESCE(h.prior_orders, 0) = 0 THEN 1 ELSE 0 END    AS new_to_brand\n    FROM shoppers s\n    LEFT JOIN history h ON h.customer_id = s.customer_id\n)\nSELECT test_group,\n       COUNT(*)                                             AS shoppers,\n       SUM(purchased)                                       AS purchasers,\n       SUM(purchased * new_to_brand)                        AS ntb_purchasers,\n       ROUND(1.0 * SUM(purchased * new_to_brand) / COUNT(*), 5) AS ntb_purchase_rate,\n       ROUND(1.0 * SUM(purchased * new_to_brand) / SUM(purchased), 4) AS ntb_share_of_purchasers\nFROM labelled\nGROUP BY test_group;\n", "rows": 2, "cols": ["test_group", "shoppers", "purchasers", "ntb_purchasers", "ntb_purchase_rate", "ntb_share_of_purchasers"], "data": [["control", "4030", "946", "20", "0.005", "0.0211"], ["treatment", "35970", "10998", "183", "0.0051", "0.0166"]]}], "db": {"shoppers": 40000, "campaigns": 4, "ad_impressions": 218545, "brand_purchases": 239629, "weekly_media": 156}};
+const CH = ["Sponsored Products","Sponsored Brands","Prime Video ads","Amazon DSP video"];
+const SH = {"Sponsored Products":"var(--g1)","Sponsored Brands":"var(--g2)","Prime Video ads":"var(--g3)","Amazon DSP video":"var(--g4)"};
+const $ = id => document.getElementById(id);
+const pct = (v,d=1) => (v*100).toFixed(d)+"%";
+const pts = (v,d=1) => (v>=0?"+":"−")+Math.abs(v*100).toFixed(d)+" pts";
+const money = v => "$"+Math.round(v).toLocaleString("en-CA");
+const kk = v => "$"+(v/1000).toFixed(1)+"K";
+const NS = "http://www.w3.org/2000/svg";
+function el(p,tag,a,txt){ const e=document.createElementNS(NS,tag); let st="";
+  for(const k in a){ const v=String(a[k]); if((k==="fill"||k==="stroke")&&v.startsWith("var(")) st+=`${k}:${v};`; else e.setAttribute(k,v); }
+  if(st) e.setAttribute("style",(e.getAttribute("style")||"")+st); if(txt!=null) e.textContent=txt; p.appendChild(e); return e; }
+const clear = s => { while(s.firstChild) s.removeChild(s.firstChild); };
+function showTip(svg,html,x,y){ const c=svg.parentElement; let t=c.querySelector(".tip"); if(!t){ t=document.createElement("div"); t.className="tip"; c.appendChild(t); }
+  const r=svg.getBoundingClientRect(), cr=c.getBoundingClientRect(), vb=svg.viewBox.baseVal;
+  t.innerHTML=html; t.style.left=(r.left-cr.left+c.scrollLeft+x*r.width/vb.width)+"px"; t.style.top=(r.top-cr.top+y*r.height/vb.height)+"px"; t.hidden=false; }
+function hideTip(svg){ const t=svg.parentElement.querySelector(".tip"); if(t) t.hidden=true; }
+function hover(svg,node,html,x,y){ node.addEventListener("mousemove",()=>showTip(svg,html(),x,y)); node.addEventListener("mouseleave",()=>hideTip(svg)); }
+
+const I=D.inc, NTB=D.ntb, A=D.attr.models, M=D.mmm, R=M.reallocation, S=D.seg, C=M.channels;
+const shiftSP = R.recommended["Sponsored Products"]-R.current["Sponsored Products"];
+
+/* KPIs */
+$("kpis").innerHTML=[
+  [pts(I.lift_pp), "more shoppers bought, because of ads"],
+  [I.iroas.toFixed(2)+"x", "incremental ROAS"],
+  [Math.round(I.naive_relative_lift/I.relative_lift)+"x", "overstatement by the easy comparison"],
+  [M.train_r2.toFixed(3), "MMM R² · "+pct(M.holdout_mape_13wk)+" forecast error"],
+  ["+"+pct(R.uplift_pct), "sales from the same budget, reshuffled"],
+].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join("");
+
+/* 01 LIFT */
+let mode="holdout";
+function drawLift(){
+  const s=$("c-lift"); clear(s); const h=mode==="holdout";
+  const rows=h?[["No ads (held out)",I.control_conv_rate,"var(--g4)",I.control_customers],["Eligible for ads",I.treatment_conv_rate,"var(--g1)",I.treatment_customers]]
+             :[["Didn't see an ad",I.naive_unexposed_cr,"var(--g4)",null],["Saw an ad",I.naive_exposed_cr,"var(--g2)",null]];
+  const x0=150,w=420,max=.4;
+  [0,.1,.2,.3,.4].forEach(t=>{ const x=x0+t/max*w; el(s,"line",{x1:x,x2:x,y1:20,y2:164,stroke:"var(--line)"}); el(s,"text",{x,y:182,"text-anchor":"middle"},(t*100)+"%"); });
+  el(s,"text",{x:x0+w/2,y:202,"text-anchor":"middle"},"Shoppers who bought Northfield coffee during the campaign");
+  rows.forEach((r,i)=>{ const y=36+i*66;
+    el(s,"text",{x:x0-12,y:y+23,"text-anchor":"end",class:"lbl"},r[0]);
+    el(s,"rect",{x:x0,y,width:r[1]/max*w,height:36,rx:4,fill:r[2]});
+    el(s,"text",{x:x0+r[1]/max*w+8,y:y+23,class:"val"},pct(r[1]));
+    const hit=el(s,"rect",{x:0,y:y-10,width:620,height:56,fill:"transparent"});
+    hover(s,hit,()=>`<b>${r[0]}</b><br>${pct(r[1])} bought${r[3]?`<br>${r[3].toLocaleString()} shoppers`:""}`,x0+r[1]/max*w/2,y);
+  });
+  const rel=h?I.relative_lift:I.naive_relative_lift, lp=h?I.lift_pp:I.naive_exposed_cr-I.naive_unexposed_cr;
+  $("lift-big").textContent="+"+pct(rel,0);
+  $("lift-sub").textContent=h?`${pts(lp)} · 95% CI ${pts(I.lift_ci95_pp[0])} to ${pts(I.lift_ci95_pp[1])} · z = ${I.z_score.toFixed(1)}`:`${pts(lp)} · biased, see note`;
+  $("m-holdout").setAttribute("aria-pressed",h); $("m-naive").setAttribute("aria-pressed",!h);
+  $("lift-take").innerHTML=h?`<b>Takeaway</b>The groups differ only by the ads, so the +${pct(I.relative_lift,0)} is real (z = ${I.z_score.toFixed(1)}). That is about ${money(I.incremental_sales)} in sales Northfield would not have made without the campaign.`
+    :`<b>Takeaway</b>This comparison claims +${pct(I.naive_relative_lift,0)}. Ads are shown to engaged coffee buyers who were going to buy anyway, so "saw an ad" mostly measures who was targeted, not what the ad did.`;
+}
+function drawIroas(){
+  const c=+$("cost").value; $("cost-out").textContent=money(c);
+  const v=I.incremental_sales/c, lo=I.incremental_sales_per_customer_ci95[0]*I.treatment_customers/c, hi=I.incremental_sales_per_customer_ci95[1]*I.treatment_customers/c;
+  $("iroas").textContent=v.toFixed(2)+"x"; $("iroas-ci").textContent=`95% CI ${lo.toFixed(2)}x to ${hi.toFixed(2)}x · $ sales per $1 of media`;
+  $("iroas-verdict").innerHTML= lo>1?`<span class="verdict solid">✓ Pays back even at the low end</span>`: hi<1?`<span class="verdict">✕ Returns less than it costs</span>`:`<span class="verdict ghost">~ Break-even is within the range</span>`;
+}
+$("ntb").innerHTML=`<div><span>Extra buyers from the campaign</span><b>${Math.round(NTB.incremental_purchasers).toLocaleString()}</b></div>
+ <div><span>New-to-brand share of buyers</span><b>${pct(NTB.treatment_ntb_share)}</b></div>
+ <div><span>Extra buyers who were new to brand</span><b>${NTB.ntb_share_of_incremental<0.01?"&lt;1%":pct(NTB.ntb_share_of_incremental)}</b></div>`;
+$("m-holdout").onclick=()=>{mode="holdout";drawLift();}; $("m-naive").onclick=()=>{mode="naive";drawLift();};
+$("cost").oninput=drawIroas; drawLift(); drawIroas();
+
+/* 02 ATTRIBUTION */
+const MODELS=["First touch","Last touch","Linear","Markov (removal effect)"]; let am="Last touch";
+$("attr-models").innerHTML=MODELS.map(m=>`<button data-m="${m}" aria-pressed="${m===am}">${m.replace(" (removal effect)","")}</button>`).join("");
+$("attr-models").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){am=b.dataset.m;drawAttr();} });
+function drawAttr(){
+  [...$("attr-models").children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===am));
+  const s=$("c-attr"); clear(s); const T=A["True incremental share"], Mo=A[am], x0=150,w=400,max=.6;
+  [0,.2,.4,.6].forEach(t=>{ const x=x0+t/max*w; el(s,"line",{x1:x,x2:x,y1:8,y2:204,stroke:"var(--line)"}); el(s,"text",{x,y:224,"text-anchor":"middle"},(t*100)+"%"); });
+  CH.forEach((c,i)=>{ const y=16+i*48, v=Mo[c], t=T[c];
+    el(s,"text",{x:x0-12,y:y+19,"text-anchor":"end",class:"lbl"},c);
+    el(s,"rect",{x:x0,y,width:Math.max(2,v/max*w),height:28,rx:4,fill:"var(--g4)"});
+    el(s,"line",{x1:x0+t/max*w,x2:x0+t/max*w,y1:y-6,y2:y+34,stroke:"var(--ink)","stroke-width":2.5});
+    el(s,"text",{x:x0+Math.max(v,t)/max*w+8,y:y+19,class:"val"},`${pct(v,0)} → ${pct(t,0)}`);
+    const hit=el(s,"rect",{x:0,y:y-8,width:620,height:44,fill:"transparent"}); const r=v/t;
+    hover(s,hit,()=>`<b>${c}</b><br>${am}: ${pct(v)}<br>True share: ${pct(t)}<br>${r>1?"Over":"Under"}-credited ${(r>1?r:1/r).toFixed(1)}x`,x0+v/max*w/2,y);
+  });
+  $("attr-leg").textContent=am+" credit";
+  const mae=CH.reduce((a,c)=>a+Math.abs(Mo[c]-T[c]),0)/CH.length;
+  $("attr-detail").innerHTML=`<span class="ctl-label">Average credit error</span><div class="big">${(mae*100).toFixed(1)} pts</div><div class="sub">DSP video gets ${(Mo["Amazon DSP video"]/T["Amazon DSP video"]).toFixed(1)}x its true share. Sponsored Products gets ${pct(Mo["Sponsored Products"],0)} for ${pct(T["Sponsored Products"],0)} of the impact.</div>`;
+}
+drawAttr();
+
+/* 03 AUDIENCES */
+let ss=0; const ACT=["Prioritize","Keep investing","Grow frequency","Suppress"];
+const WHY=["Largest lift and highest value. Protect this audience.","Clear lift at lower spend per shopper.","Clear lift, fewer impressions today. Room to grow.","No measurable lift. Move these impressions elsewhere."];
+function drawSeg(){
+  const s=$("c-seg"); clear(s); const x0=190,w=390,lo=-.04,hi=.16,X=v=>x0+(v-lo)/(hi-lo)*w;
+  [-.04,0,.04,.08,.12,.16].forEach(t=>{ el(s,"line",{x1:X(t),x2:X(t),y1:8,y2:164,stroke:t===0?"var(--g3)":"var(--line)","stroke-dasharray":t===0?"3 3":"0"}); el(s,"text",{x:X(t),y:184,"text-anchor":"middle"},(t>0?"+":t<0?"−":"")+Math.abs(Math.round(t*100))+" pts"); });
+  S.forEach((g,i)=>{ const y=26+i*39, on=i===ss;
+    el(s,"text",{x:x0-14,y:y+4,"text-anchor":"end",class:"lbl","font-weight":on?"700":"500"},g.segment);
+    el(s,"line",{x1:X(g.lift_ci95_pp[0]),x2:X(g.lift_ci95_pp[1]),y1:y,y2:y,stroke:on?"var(--g2)":"var(--g4)","stroke-width":4,"stroke-linecap":"round"});
+    el(s,"circle",{cx:X(g.lift_pp),cy:y,r:on?8:6,fill:on?"var(--g1)":"var(--panel)",stroke:on?"var(--g1)":"var(--g2)","stroke-width":2});
+    const hit=el(s,"rect",{x:0,y:y-18,width:620,height:36,fill:"transparent"}); hit.style.cursor="pointer";
+    hit.addEventListener("click",()=>{ss=i;drawSeg();});
+    hover(s,hit,()=>`<b>${g.segment}</b><br>Lift ${pts(g.lift_pp)}<br>95% CI ${pts(g.lift_ci95_pp[0])} to ${pts(g.lift_ci95_pp[1])}`,X(g.lift_pp),y-6);
+  });
+  $("t-seg").innerHTML=`<thead><tr><th>Segment</th><th>Shoppers</th><th>Orders, prior yr</th><th>Buy rate, no ads</th><th>Lift</th><th>Real?</th></tr></thead><tbody>`+
+    S.map((g,i)=>`<tr class="pick ${i===ss?"on":""}" data-i="${i}" tabindex="0"><td>${g.segment}</td><td>${pct(g.share,0)}</td><td>${g.avg_orders_12m.toFixed(1)}</td><td>${pct(g.control_conv_rate)}</td><td>${pts(g.lift_pp)}</td><td><span class="pill ${g.lift_ci95_pp[0]>0?"":"no"}">${g.lift_ci95_pp[0]>0?"significant":"no"}</span></td></tr>`).join("")+"</tbody>";
+  const g=S[ss], sig=g.lift_ci95_pp[0]>0;
+  $("seg-card").innerHTML=`<div><span class="ctl-label">Segment</span><div style="font-size:1.25rem;font-weight:700;letter-spacing:-.01em">${g.segment}</div><div class="sub">${pct(g.share,0)} of shoppers · ${pct(g.prime_share,0)} Prime members</div></div>
+   <div><span class="ctl-label">Prior 12 months</span><div class="readout">${g.avg_orders_12m.toFixed(1)} orders · ${money(g.avg_spend_12m)}<br>last order ~${Math.round(g.median_recency_days)} days ago</div></div>
+   <div><span class="ctl-label">During campaign</span><div class="readout">${pct(g.control_conv_rate)} → ${pct(g.treatment_conv_rate)} bought<br>~${g.avg_impressions.toFixed(1)} impressions each<br>${g.incremental_sales_per_customer>=0?"+":"−"}$${Math.abs(g.incremental_sales_per_customer).toFixed(2)} extra sales per shopper</div></div>
+   <div><span class="verdict ${sig?"solid":""}">${sig?"✓":"✕"} ${ACT[ss]}</span><div class="sub" style="margin-top:8px">${WHY[ss]}</div></div>`;
+}
+$("t-seg").addEventListener("click",e=>{ const r=e.target.closest("tr.pick"); if(r){ss=+r.dataset.i;drawSeg();} });
+$("t-seg").addEventListener("keydown",e=>{ const r=e.target.closest("tr.pick"); if(r&&(e.key==="Enter"||e.key===" ")){e.preventDefault();ss=+r.dataset.i;drawSeg();} });
+drawSeg();
+
+/* 04 PLANNER */
+const hill=(x,h)=>Math.pow(x,1.4)/(Math.pow(x,1.4)+Math.pow(h,1.4));
+const resp=(c,s)=>C[c]._coef*hill(s/(1-C[c].est_decay),C[c]._half);
+const mroas=(c,s)=>(resp(c,s+500)-resp(c,s))/500;
+const cur={}; CH.forEach(c=>cur[c]=R.current[c]); const plan={...cur}; const MAX={};
+CH.forEach(c=>MAX[c]=Math.round(cur[c]*2.5/1000)*1000);
+const sw=$("sliders");
+CH.forEach((c,i)=>{ const d=document.createElement("div"); d.className="ch-row";
+  d.innerHTML=`<div class="top"><label class="name" for="sl${i}"><span class="sw" style="background:${SH[c]}"></span>${c}</label><span class="readout" id="sv${i}"></span></div>
+   <input type="range" id="sl${i}" min="0" max="${MAX[c]}" step="500" value="${Math.round(cur[c]/500)*500}"><span class="note" id="sm${i}"></span>`;
+  sw.insertBefore(d,sw.lastElementChild);
+  d.querySelector("input").addEventListener("input",e=>{plan[c]=+e.target.value;drawPlan();}); });
+function setPlan(p){ CH.forEach((c,i)=>{plan[c]=p[c]; $("sl"+i).value=Math.round(p[c]/500)*500;}); drawPlan(); }
+$("b-current").onclick=()=>setPlan(cur); $("b-rec").onclick=()=>setPlan(R.recommended);
+$("b-opt").onclick=()=>{ const total=CH.reduce((a,c)=>a+plan[c],0), p={}; let left=total;
+  CH.forEach(c=>{ const seed=Math.min(left,Math.round(.25*cur[c]/500)*500); p[c]=seed; left-=seed; });
+  while(left>=500){ let b=null,bv=-1; CH.forEach(c=>{ if(p[c]+500>MAX[c]) return; const v=mroas(c,p[c]); if(v>bv){bv=v;b=c;} }); if(!b) break; p[b]+=500; left-=500; }
+  if(left>0){ let b=CH[0]; CH.forEach(c=>{ if(mroas(c,p[c])>mroas(b,p[b])) b=c; }); p[b]+=left; }
+  setPlan(p); };
+function drawPlan(){
+  const tot=CH.reduce((a,c)=>a+plan[c],0), ct=CH.reduce((a,c)=>a+cur[c],0);
+  const sales=CH.reduce((a,c)=>a+resp(c,plan[c]),0), cs=CH.reduce((a,c)=>a+resp(c,cur[c]),0), d=sales/cs-1;
+  CH.forEach((c,i)=>{ $("sv"+i).textContent=kk(plan[c])+"/wk"; const m=mroas(c,plan[c]); $("sm"+i).innerHTML=`Next $1 returns <b style="color:var(--ink)">$${m.toFixed(2)}</b>${m<1?" · below break-even":""}`; });
+  $("plan-out").innerHTML=`<div><span>Weekly budget</span><b>${kk(tot)}</b><span>${Math.abs(tot-ct)<250?"same as today":(tot>ct?"+":"−")+kk(Math.abs(tot-ct))+" vs today"}</span></div>
+   <div><span>Extra sales / week</span><b>${kk(sales)}</b><span>${d>=0?"+":"−"}${Math.abs(d*100).toFixed(1)}% vs today</span></div>
+   <div><span>Blended ROAS</span><b>${(sales/Math.max(tot,1)).toFixed(2)}x</b><span>today ${(cs/ct).toFixed(2)}x</span></div>`;
+  drawCurves();
+}
+function drawCurves(){
+  const box=$("curves");
+  if(!box.children.length) CH.forEach((c,i)=>{ const d=document.createElement("div"); d.className="chart"; d.innerHTML=`<div style="font-size:13px;font-weight:600"><span class="sw" style="background:${SH[c]}"></span>${c}</div><svg id="cv${i}" viewBox="0 0 300 150" role="img" aria-label="${c} response curve"></svg>`; box.appendChild(d); });
+  CH.forEach((c,i)=>{ const s=$("cv"+i); clear(s); const x0=44,w=244,y0=10,h=110,mx=MAX[c],top=resp(c,mx),my=top*1.08,X=v=>x0+v/mx*w,Y=v=>y0+h-v/my*h;
+    [0,.5,1].forEach(t=>{ el(s,"line",{x1:x0,x2:x0+w,y1:Y(top*t),y2:Y(top*t),stroke:"var(--line)"}); el(s,"text",{x:x0-5,y:Y(top*t)+4,"text-anchor":"end","font-size":10},"$"+Math.round(top*t/1000)+"K"); });
+    [0,.5,1].forEach(t=>el(s,"text",{x:X(mx*t),y:y0+h+17,"text-anchor":t===0?"start":t===1?"end":"middle","font-size":10},"$"+Math.round(mx*t/1000)+"K"+(t===1?" spend":"")));
+    let d=""; for(let k=0;k<=60;k++){ const v=mx*k/60; d+=(k?"L":"M")+X(v).toFixed(1)+" "+Y(resp(c,v)).toFixed(1); }
+    el(s,"path",{d,fill:"none",stroke:"var(--g1)","stroke-width":2.5});
+    el(s,"line",{x1:X(cur[c]),x2:X(cur[c]),y1:y0,y2:y0+h,stroke:"var(--g3)","stroke-dasharray":"3 3"});
+    el(s,"circle",{cx:X(plan[c]),cy:Y(resp(c,plan[c])),r:6,fill:"var(--g2)",stroke:"var(--panel)","stroke-width":2});
+  });
+}
+drawPlan();
+(function(){ const s=$("c-fit"),a=M.weekly_actual,f=M.weekly_fitted,n=a.length,L=M.weeks_labels,x0=60,w=880,y0=12,h=200,mn=Math.min(...a,...f)*.95,mx=Math.max(...a,...f)*1.02,X=i=>x0+i/(n-1)*w,Y=v=>y0+h-(v-mn)/(mx-mn)*h;
+  el(s,"rect",{x:X(n-13),y:y0,width:X(n-1)-X(n-13),height:h,fill:"var(--panel)"});
+  for(let t=0;t<=4;t++){ const v=mn+t*(mx-mn)/4; el(s,"line",{x1:x0,x2:x0+w,y1:Y(v),y2:Y(v),stroke:"var(--line)"}); el(s,"text",{x:x0-8,y:Y(v)+4,"text-anchor":"end"},"$"+Math.round(v/1000)+"K"); }
+  [0,52,104,n-1].forEach(i=>el(s,"text",{x:X(i),y:y0+h+20,"text-anchor":i===n-1?"end":i===0?"start":"middle"},L[i]));
+  const path=arr=>arr.map((v,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join("");
+  el(s,"path",{d:path(a),fill:"none",stroke:"var(--g4)","stroke-width":2}); el(s,"path",{d:path(f),fill:"none",stroke:"var(--g1)","stroke-width":2});
+  const cr=el(s,"line",{x1:0,x2:0,y1:y0,y2:y0+h,stroke:"var(--ink)",opacity:0}), dot=el(s,"circle",{r:5,fill:"var(--g1)",stroke:"var(--panel)","stroke-width":2,opacity:0});
+  const hit=el(s,"rect",{x:x0,y:y0,width:w,height:h,fill:"transparent"});
+  hit.addEventListener("mousemove",e=>{ const r=s.getBoundingClientRect(), vx=(e.clientX-r.left)/r.width*960, i=Math.max(0,Math.min(n-1,Math.round((vx-x0)/w*(n-1))));
+    cr.setAttribute("x1",X(i)); cr.setAttribute("x2",X(i)); cr.setAttribute("opacity",.35); dot.setAttribute("cx",X(i)); dot.setAttribute("cy",Y(f[i])); dot.setAttribute("opacity",1);
+    const er=(f[i]-a[i])/a[i]; showTip(s,`<b>Week of ${L[i]}</b>${i>=n-13?" · held out":""}<br>Actual ${kk(a[i])}<br>Model ${kk(f[i])} (${er>=0?"+":"−"}${Math.abs(er*100).toFixed(1)}%)`,X(i),Math.min(Y(a[i]),Y(f[i]))); });
+  hit.addEventListener("mouseleave",()=>{cr.setAttribute("opacity",0);dot.setAttribute("opacity",0);hideTip(s);});
+})();
+$("t-roas").innerHTML=`<thead><tr><th>Ad product</th><th>Spend, 3 yrs</th><th>MMM ROAS</th><th>True ROAS</th><th>Error</th><th>Next-$1 return</th><th>Carryover</th></tr></thead><tbody>`+
+  CH.map(c=>{ const x=C[c], e=x.est_roas/x.true_roas-1; return `<tr><td>${c}</td><td>$${(x.spend/1e6).toFixed(1)}M</td><td>${x.est_roas.toFixed(2)}x</td><td>${x.true_roas.toFixed(2)}x</td><td>${e>=0?"+":"−"}${Math.abs(e*100).toFixed(0)}%</td><td>${x.marginal_roas.toFixed(2)}x${x.marginal_roas<1?" ↓":""}</td><td>${x.est_decay.toFixed(2)} <span style="color:var(--muted)">(true ${x.true_decay.toFixed(2)})</span></td></tr>`; }).join("")+"</tbody>";
+$("mmm-take").innerHTML=`<b>Takeaway</b>Average ROAS makes Prime Video ads look best (${C["Prime Video ads"].est_roas.toFixed(2)}x), but at today's spend its next dollar returns only ${C["Prime Video ads"].marginal_roas.toFixed(2)}x. Sponsored Products still returns ${C["Sponsored Products"].marginal_roas.toFixed(2)}x. The recommended mix adds ${pct(R.uplift_pct)} in extra sales on the same budget; on the simulator's true curves it delivers +${pct(R.true_uplift_pct_of_recommendation)} of a possible +${pct(R.true_best_possible_uplift_pct)}.`;
+
+/* 05 SQL */
+const db=D.db;
+$("sql-intro").textContent=`Five related tables in SQLite: shoppers (${db.shoppers.toLocaleString()}), campaigns (${db.campaigns}), ad_impressions (${db.ad_impressions.toLocaleString()}), brand_purchases (${db.brand_purchases.toLocaleString()}) and weekly_media (${db.weekly_media} weeks). Each query feeds one study. Preview shows real output.`;
+const KW=/\b(WITH|AS|SELECT|FROM|JOIN|LEFT|ON|AND|WHERE|GROUP BY|ORDER BY|BETWEEN|CASE|WHEN|THEN|ELSE|END|DISTINCT|OVER|PARTITION BY|IS NULL|DESC|ASC|NULL)\b/g;
+const FN=/\b(COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|ROW_NUMBER|GROUP_CONCAT)\b/g;
+const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const hl=sql=>sql.split("\n").map(line=>{ const i=line.indexOf("--"); let code=i>=0?line.slice(0,i):line, cm=i>=0?line.slice(i):"";
+  code='<span class="tx">'+esc(code).replace(KW,'<span class="kw">$1</span>').replace(FN,'<span class="fn">$1</span>')+'</span>'; return code+(cm?`<span class="cm">${esc(cm)}</span>`:""); }).join("\n");
+const USE={"01_lift_by_group.sql":"01 Lift","02_attribution_paths.sql":"02 Attribution","03_non_converter_paths.sql":"02 Attribution (Markov)","04_rfm_features.sql":"01 Lift CI, 03 Audiences","05_new_to_brand.sql":"01 Lift (new-to-brand)"};
+let qs=0;
+$("sql-tabs").innerHTML=D.sql.map((q,i)=>`<button role="tab" data-i="${i}" aria-selected="${i===0}">${q.file}</button>`).join("");
+$("sql-tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){qs=+b.dataset.i;drawSql();} });
+function drawSql(){ const q=D.sql[qs]; [...$("sql-tabs").children].forEach((b,i)=>b.setAttribute("aria-selected",i===qs));
+  $("sql-code").innerHTML=hl(q.sql.trim()); $("sql-meta").textContent=`${q.rows.toLocaleString()} rows returned · feeds ${USE[q.file]} · first ${q.data.length} shown`;
+  $("sql-table").innerHTML=`<thead><tr>${q.cols.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>${q.data.map(r=>`<tr>${r.map(v=>`<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>`; }
+drawSql();
+
+/* 06 RECS */
+$("recs-list").innerHTML=[
+  ["01","Measure with holdouts",`Report incremental ROAS from randomized holdouts and retire "saw an ad vs. didn't" reporting.`,`${I.iroas.toFixed(2)}x iROAS · old method overstated lift ${Math.round(I.naive_relative_lift/I.relative_lift)}x`],
+  ["02","Move budget to Sponsored Products",`Shift about ${kk(shiftSP)} a week into Sponsored Products, funded mainly by broad-reach DSP video and a little Prime Video.`,`+${pct(R.uplift_pct)} extra sales · same budget`],
+  ["03","Stop paying for lapsed shoppers",`Exclude shoppers with no purchase in the last year and redirect those impressions to loyal and engaged buyers.`,`Lapsed lift: ${pts(S[S.length-1].lift_pp)} (not significant)`],
+  ["04","Add a new-to-brand goal",`Almost none of the extra buyers were new to Northfield. If growth is the goal, test prospecting audiences and track new-to-brand lift.`,`New-to-brand share of extra buyers: ${NTB.ntb_share_of_incremental<0.01?"<1%":pct(NTB.ntb_share_of_incremental)}`],
+].map(([n,t,d,imp])=>`<div><div class="n">${n}</div><div class="t">${t}</div><div class="d">${d}</div><div class="imp">${imp}</div></div>`).join("");
+
+/* active nav */
+const navs=[...document.querySelectorAll("[data-s]")];
+const io=new IntersectionObserver(es=>es.forEach(en=>{ if(en.isIntersecting) navs.forEach(a=>a.classList.toggle("on",a.dataset.s===en.target.id)); }),{rootMargin:"-35% 0px -60% 0px"});
+document.querySelectorAll("#overview, section.study").forEach(s=>io.observe(s));
+</script>
+
+</body></html>
